@@ -64,6 +64,22 @@ div.left h4 {
 	text-decoration: underline;
 }
 
+div.right {
+	background-color: rgba(0,0,0,0.5);
+	float: right;
+	width: 15%;
+	height: 100%;
+	min-width: 150px;
+	max-width: 250px;
+	position: relative;
+	top: 9%;
+	padding-left: 15px;
+	color: white;
+}
+div.right h4 {
+	text-decoration: underline;
+}
+
 #game_screen {
 	position:relative;
 	background-color: black;
