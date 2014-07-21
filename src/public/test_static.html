@@ -1,0 +1,96 @@
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I Was a Serial Killer Before It Was Cool</title>
+
+<!--jQuery-->
+<script src="/lib/js/jquery-2.1.1.min.js"></script>
+
+<!--Bootstrap-->
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+<!-- Optional theme -->
+<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+<!-- Latest compiled and minified JavaScript -->
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+
+<!--Phaser-->
+<script src="//cdnjs.cloudflare.com/ajax/libs/phaser/2.0.6/phaser.min.js"></script>
+
+<!--Socket.IO-->
+<script src="https://cdn.socket.io/socket.io-1.0.6.js"></script>
+
+<!-- Game Code -->
+<link rel="stylesheet" href="/lib/css/game.css">
+<script src="/lib/js/hipsters_game.min.js"></script>
+
+
+</head>
+<body>
+<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+	<div class="container">
+		<div class="navbar-header">
+			<h3>I Was a Serial Killer Before It Was Cool</h3>
+		</div>
+	</div>
+</div>
+
+<div class="left">
+	<div>
+		<h4>About</h4>
+		<p>Currently being developed for <a href='http://insanityjam.com/2/viewtopic.php?id=10'>Insanity Jam 2</a> by Ryan Guthrie. The random description generated for the game is: <i>A hack and slash game where you inquire about a mysterious hipster.</i><br><br>
+		This is an online ARPG style game world set in a modern city similar to Portland, OR where you must battle through hipster minions on your quest to find and kill the mysterious hipster to fulfill your revenge. 
+		</p> 
+	</div>
+	<br>
+	<div>
+		<h4>Debug Details</h4>
+		<p>
+		Server Status: <span id='info_server'>Not Initialized</span><br>
+		Latency: <span id='info_latency'>N/A</span><br>
+		Position: <span id='info_position'>N/A</span><br>
+		</p>
+	</div>
+</div>
+
+
+<div class="container theme-showcase" role="main">
+<div class="jumbotron">
+	<canvas id="game_screen" width="800" height="500">
+
+	</canvas>
+
+</div>
+</div>
+
+
+
+
+
+<div id='alert_modal' class='modal'>
+<div class='msg'>Modal Popup!</div>
+</div>
+
+<script type="text/javascript">
+$('div.modal').hide();
+$('div.modal').each(function(o){
+	var dc = document.createElement('div');
+	dc.innerHTML = 'close';
+	$(dc).addClass('close');
+	$(dc).attr('data-modal', $(this).attr('id') );
+	$(dc).click(function( ){
+		var close_id = $(this).attr('data-modal');
+		$('#'+close_id).modal('hide');
+	});
+	$(this).append(dc);
+});
+
+var game = CreateGame('game_screen');
+console.log("Game created! ",game);
+game.init();
+</script>
+
+</body>
+</html>
