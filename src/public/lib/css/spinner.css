@@ -118,6 +118,10 @@
   background: linear-gradient(#cd5c5c,transparent,#cd5c5c)
 }
 
+.cafe {
+  background: linear-gradient(#553F35,transparent,#53433E);
+}
+
 .purple {
   background: -webkit-linear-gradient(#e166e1,transparent,#e166e1);
   background: -moz-linear-gradient(#e166e1,transparent,#e166e1);
