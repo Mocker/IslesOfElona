@@ -7,6 +7,7 @@ var sio = require('socket.io');
 var mongoose = require('mongoose');
 var Player = require('../client/Player');
 var CONFIG = require('../cnf/Config');
+var Models = require('inc/Models');
 
 
 var cnf = {
@@ -18,11 +19,15 @@ var cnf = {
 var db_connected = false;
 mongoose.connect(CONFIG.MONGO_URL);
 var db = mongoose.connection;
+var MODELS = false;
 
 db.on('error', console.error.bind(console,'db connection error'));
 db.once('open', function callback(){
   console.log('db connected');
   db_connected = true;
+
+  MODELS = new Models();
+
 });
 
 
