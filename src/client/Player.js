@@ -12,12 +12,14 @@ function Player( username, password) {
 	this._created = new Date().getTime();
 	this._socket = false;
 	this._zone = 'login';
+	this._world = 'login';
 	this._pos = [0,0];
 	this._health = 100;
 	this._vel = [0,0];
 	this._anim = "standing";
 	this._bag = [];
 	this._equip = {};
+	this._model = false; //use on server to store db reference
 
 	playerCount++;
 	var self = this;
@@ -48,6 +50,7 @@ Player.prototype.getProfile = function() {
 		bag: this._bag,
 		equip: this._equip,
 		zone: this._zone,
+		world: this._world,
 		pos: this._pos,
 		created: this._created
 	};
@@ -60,6 +63,7 @@ Player.prototype.setProfile = function (p) {
 	this._zone = p.zone;
 	this._pos = p.pos;
 	this._created = p.created;
+	this._world = p.world;
 };
 
 //update client player display

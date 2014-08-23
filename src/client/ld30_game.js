@@ -9,6 +9,7 @@ CreateGame = function(canvas_id, opts) {
 	this._connected = false;
 	this._authenticated = false;
 	this._zone = false;
+	this._world = false;
 	this._player = false;
 
 	if(!this._canvasE) {

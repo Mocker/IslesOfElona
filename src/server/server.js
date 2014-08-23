@@ -7,7 +7,7 @@ var sio = require('socket.io');
 var mongoose = require('mongoose');
 var Player = require('../client/Player');
 var CONFIG = require('../cnf/Config');
-var Models = require('inc/Models');
+var Models = require('./inc/Models');
 
 
 var cnf = {
@@ -25,7 +25,6 @@ db.on('error', console.error.bind(console,'db connection error'));
 db.once('open', function callback(){
   console.log('db connected');
   db_connected = true;
-
   MODELS = new Models();
 
 });
@@ -64,7 +63,8 @@ io.on('connection', function(socket){
   	}
 
   	console.log('received login for ',params.user);
-  	if( players[params.user]) {
+  	if( players[params.user] ) {
+      //player already exists - resume
   		if( !players[params.user].login( params.pwd ) ) {
   			socket.emit('login',{status:false,err:'invalid password'});
  			return;
@@ -73,18 +73,45 @@ io.on('connection', function(socket){
   		players[params.user].setSocket(socket);
   		socket.emit('login', {status:true, profile: socket.player.getProfile() } ); 
 
-
   	} else {
-  		//create new player
-  		socket.player = new Player(params.user, params.pwd);
-  		socket.player.setSocket(socket);
-  		players[params.user] = socket.player;
-  		socket.emit('login',{status:true, profile: socket.player.getProfile() } );
+      //check DB for player
+      MODELS.Player.findOne({ username: params.user }).exec(function(err, pResult){
+        if(err) {
+          console.log("Unable to login! DB Error for username: "+params.user+" - "+err.message);
+          socket.emit('login',{status:false,err:'Database Error'});
+        } else if(pResult) {
+          if(pResult.pwdE==params.pwd ) { //TODO:: encrypt pwd
+            socket.player = new Player(params.user, params.pwd);
+            MODELS.loadPlayer(socket.player, pResult);
+            socket.player.setSocket(socket);
+            players[params.user] = socket.player;
+            socket.emit('login',{status:true, profile: socket.player.getProfile() } );
+            socket.ping_interval = setInterval(function(){
+              socket.player.sendPing();
+            },1000);
+              console.log("Player connected. Current players: "+socket.player.playerCount()+"\n");
+          } else {
+            socket.emit('login',{status:false,err:'invalid password'});
+          }
+        } else {
+          //create new player
+          socket.player = new Player(params.user, params.pwd);
+          socket.player._model = new MODELS.Player();
+          MODELS.savePlayer(socket.player);
+          socket.player.setSocket(socket);
+          players[params.user] = socket.player;
+          socket.emit('login',{status:true, profile: socket.player.getProfile() } );
+          socket.ping_interval = setInterval(function(){
+            socket.player.sendPing();
+          },1000);
+            console.log("Player connected. Current players: "+socket.player.playerCount()+"\n");
+        }
+
+      });
+
+  		
   	}
-  	socket.ping_interval = setInterval(function(){
-		socket.player.sendPing();
-	},1000);
-  	console.log("Player connected. Current players: "+socket.player.playerCount()+"\n");
+  	
   });
 
   socket.on('ping',function(data){
