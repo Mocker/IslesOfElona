@@ -19,8 +19,10 @@
 <!-- Latest compiled and minified JavaScript -->
 <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 
-<!--Phaser-->
+<!--Phaser
 <script src="//cdnjs.cloudflare.com/ajax/libs/phaser/2.0.6/phaser.min.js"></script>
+-->
+<script src="/lib/js/phaser.min.js"></script>
 
 <!--Socket.IO-->
 <script src="https://cdn.socket.io/socket.io-1.0.6.js"></script>
@@ -60,6 +62,17 @@
 		Zone: <span id='info_zone'>N/A</span><br>
 		</p>
 	</div>
+	<br><h4>Chat</h4>
+	<div id='chat_div' style='max-height:250px; min-height:80px; overflow-y:scroll;overflow-x:hidden;max-width:200px; background-color:white;color:black;'>
+		<ul id='chat_messages' style='width:250px; min-height:100px; list-style-type:none;padding:0px'>
+
+		</ul>
+
+	</div><br>
+	<form id="frm_msg" onSubmit="return false;">
+	<input type="text" width="150px;" id="msg" style="color:black;">
+	<br><input type='submit' value='Send' id='send_msg' style="color:black;">
+	</form>
 </div>
 
 
@@ -86,9 +99,9 @@
 	    <span>Loading</span>
 	  </div>
 	</div>
-	<canvas id="game_screen" width="800" height="500">
+	<div id="game_screen" width="800" height="500">
 
-	</canvas>
+	</div>
 
 </div>
 </div>
@@ -157,6 +170,7 @@ $('#btnLogin').click(function(){
 var game = CreateGame('game_screen');
 console.log("Game created! ",game);
 game.init();
+var g = game;
 </script>
 
 </body>

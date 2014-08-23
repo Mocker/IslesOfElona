@@ -93,6 +93,12 @@ canvas {
 #game_screen {
 	position:relative;
 	background-color: black;
-	border: 10px inset rgb(199, 194, 194);
+	/*border: 10px inset rgb(199, 194, 194);*/
 	margin-top:25px;
+}
+
+@media all and (min-width: 1200px) {
+	div.container {
+		width: 1000px;
+	}
 }

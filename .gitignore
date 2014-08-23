@@ -27,5 +27,8 @@ node_modules
 #inbetween compiled js not used in final product
 src/dist
 
+#save map files for each world
+maps
+
 #System specific configuration
 src/cnf

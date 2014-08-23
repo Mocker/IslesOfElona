@@ -24,8 +24,6 @@ function Player( username, password) {
 	playerCount++;
 	var self = this;
 
-	
-
 }
 
 Player.prototype.playerCount = function(){
