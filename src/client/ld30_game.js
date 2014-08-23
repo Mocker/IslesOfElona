@@ -11,6 +11,7 @@ CreateGame = function(canvas_id, opts) {
 	this._zone = false;
 	this._world = false;
 	this._player = false;
+	this._primary_world = false;
 
 	if(!this._canvasE) {
 		alert("Missing canvas!"); return false;
@@ -29,11 +30,20 @@ CreateGame = function(canvas_id, opts) {
 			self.send_msg() ;
 			return false;
 		});
+		$('#frm_warp').on('submit', function(evt){
+			var warp_id = $('#warp_id').val();
+			if(!warp_id || warp_id.length < 10) return;
+			self._socket.emit('warp', warp_id);
+			showAlert('Requesting warp');
+			return false;
+		});
 		this._socket.on('connect', function(){
 			$('#info_server').html('Connected');
 			hideSpinner();
 			self._connected = true;
 			$('#login_modal').modal('show');
+			console.log('socket connect');
+			//$('#login_modal').css('display','block');
 		});
 		this._socket.on('connect_error',function(){
 			$('#info_server').html('Connect Failed');
@@ -51,9 +61,11 @@ CreateGame = function(canvas_id, opts) {
 		this._socket.on('login', function(resp){
 			console.log("login response",resp);
 			processingLogin = false;
+			$('#login_modal').css('display','none');
+			$('div.modal-backdrop').css('display','none');
 			if(resp.status){
 				$('#info_server').html('Logged In');
-				$('#login_modal').modal('hide');
+				
 				//logged in with user.. create player object and load zone
 				self._player = new Player(self._login_params.user, self._login_params.pwd);
 				self._player.setProfile(resp.profile);
@@ -67,13 +79,19 @@ CreateGame = function(canvas_id, opts) {
 			}
 		});
 
-		this._socket.on('world', function(data){
-			console.log("Received world data from server!",data);
-			$('#login_modal').modal('hide');
+		this._socket.on('world', function(data, newPos){
+			self.playable = false;
+			showSpinner("Loading world: "+data._name);
+			console.log("Received world data from server!",data, newPos);
 			self._world = data;
 			self._player._world = data;
+			if(data._is_primary && ! self._primary_world) {
+				self._primary_world ={ id: data._model._id, name: data._name, pos: newPos };
+			}
 			$('#info_zone').html(data._name);
-			self.loadWorld();
+			$('#info_zone_id').html(data._model._id);
+			$('#login_modal').modal('hide');
+			self.loadWorld(newPos);
 		});
 
 		this._socket.on('chat message',function(msg){
@@ -95,7 +113,7 @@ CreateGame = function(canvas_id, opts) {
 			}
 			if( typeof(data.position)!="undefined"){
 				$("#info_position").html("x:"+data.position[0]+" y:"+data.position[1]);
-				//todo:: update position of player on world map
+				self.movePlayerTo(data.position[0],data.position[1]);
 			}
 			if( typeof(data.zone) != "undefined" ){
 				$('#info_zone').html(data.zone);
@@ -136,11 +154,14 @@ CreateGame = function(canvas_id, opts) {
 		self.layer.resizeWorld();
 
 		self.sprite = self._p.add.sprite(10,10,'chr1');
-		self.sprite.animations.add('walk',0,4);
-		self.sprite.animations.add('stand',0);
-		self.sprite.animations.play('stand', 1);
-		
-		//self.sprite.anchor.setTo(0.5, 0.5);
+		self.sprite.animations.add('walk',[0,1,2,3]);
+		self.sprite.animations.add('stand',[0]);
+		self.sprite.animations.play('stand', 0);
+		self.sprite.animations.add('walk_left',[4,5,6,7]);
+		self.sprite.animations.add('walk_right',[8,9,10,11]);
+		self.sprite.animations.add('walk_up',[12,13,14,15]);
+		self.sprite.anchor.setTo(0.5, 0.5);
+		self.sprite.z = 10;
 		//self._p.physics.enable(self.sprite);
 		//self._p.camera.follow(self.sprite);
 		console.log("sprite created", self.sprite);
@@ -177,23 +198,31 @@ CreateGame = function(canvas_id, opts) {
 	this.up = function() {
 		if(!self.playable) return;
 		var newTile = self.map.getTileAbove(self.map.currentLayer, self.curTile.x, self.curTile.y );
-		if(newTile) self.movePlayerTo(newTile.x, newTile.y);
+		var isMoved = false;
+		if(newTile) isMoved = self.movePlayerTo(newTile.x, newTile.y);
+		if(isMoved) self.sprite.animations.play('walk_up',3);
 	};
 	this.down = function() {
 		if(!self.playable) return;
 		var newTile = self.map.getTileBelow(self.map.currentLayer, self.curTile.x, self.curTile.y );
-		if(newTile) self.movePlayerTo(newTile.x, newTile.y);
+		var isMoved = false;
+		if(newTile) isMoved = self.movePlayerTo(newTile.x, newTile.y);
+		if(isMoved) self.sprite.animations.play('walk',3);
 	};
 	this.left = function() {
 		console.log("left!");
 		if(!self.playable) return;
 		var newTile = self.map.getTileLeft(self.map.currentLayer, self.curTile.x, self.curTile.y );
-		if(newTile) self.movePlayerTo(newTile.x, newTile.y);
+		var isMoved = false;
+		if(newTile) isMoved = self.movePlayerTo(newTile.x, newTile.y);
+		if(isMoved) self.sprite.animations.play('walk_left',3);
 	};
 	this.right = function() {
 		if(!self.playable) return;
 		var newTile = self.map.getTileRight(self.map.currentLayer, self.curTile.x, self.curTile.y );
-		if(newTile) self.movePlayerTo(newTile.x, newTile.y);
+		var isMoved = false;
+		if(newTile) isMoved = self.movePlayerTo(newTile.x, newTile.y);
+		if(isMoved) self.sprite.animations.play('walk_right',3);
 	};
 
 	this.render = function() {
@@ -201,35 +230,56 @@ CreateGame = function(canvas_id, opts) {
 	};
 
 	//loaded world data from server. Setup tilemaps and display and begin playing..
-	this.loadWorld = function() {
+	this.loadWorld = function(newPos) {
+		
 		showAlert("World data received - creating display");
-		$('#login_modal').modal('hide');
+		console.log("world data recieived - creating display");
 		var world_layer = self.map.getLayer('world');
 		if(world_layer===null) {
-			wl = self.map.create('world', self._world._size, self._world._size, 48, 48);
+			wl = self.map.create('world', self._world._mapData.length, self._world._mapData[0].length, 48, 48);
+			self._worldlayer = wl;
 			world_layer = self.map.getLayer('world');
+			wl.resizeWorld();
 		}
-		for(var x=0; x<self.map._mapData.length; x++) {
-			for(var y=0; y<self.map._mapData[x].length;y++ ) {
-				console.log(self.map._mapData[x][y], cnf.tiles[self.map._mapData[x][y]].tile_i );
-				self.map.putTile( cnf.tiles[self.map._mapData[x][y]].tile_i, x, y , 'world' );
+		var tile = null;
+		for(var x=0; x<self._world._mapData.length; x++) {
+			for(var y=0; y<self._world._mapData[x].length;y++ ) {
+				//console.log(self.map._mapData[x][y], cnf.tiles[self.map._mapData[x][y]].tile_i );
+				tile = self.map.putTile( cnf.tiles[self._world._mapData[x][y]].tile_i, x, y , 'world' );
+				tile.properties.i = self._world._mapData[x][y];
+				tile.properties.passable = cnf.tiles[self._world._mapData[x][y]].passable;
 			}
 		}
 		self.map.setLayer('world');
+		console.log("map layer set");
+		//TODO:: load npcs /objects
 
-		var centerX = Math.floor(self._world._size/2);
-		self.movePlayerTo( centerX, centerY );
+		var centerX = Math.floor(self._world._width/2); //TODO:: player pos sent from server
+		if(newPos) self.movePlayerTo( newPos[0], newPos[1] );
+		else self.movePlayerTo( centerX, Math.floor(self._world._height/2) );
 		self.playable = true;
+		self._p.camera.follow(self.sprite);
+		self.sprite.bringToTop();
+		hideSpinner();
+		$('#login_modal').modal('hide');
+		console.log("loadWorld Finished");
+		setTimeout(function(){
+			self.sprite.bringToTop();
+		},100);
 	};
 
 	this.movePlayerTo = function(tileX, tileY) {
 		var centerTile = self.map.getTile( tileX, tileY, self.map.currentLayer );
 		console.log(centerTile);
 		if( centerTile.properties.passable ===false ) return false;
+		$('#info_position').html( tileX+' , '+tileY);
 		//TODO:: send move request to server
 		self.curTile = centerTile;
 		self.sprite.x = centerTile.worldX + (self.sprite.width/2);
-		self.sprite.y = centerTile.worldY + (self.sprite.height/2);
+		self.sprite.y = centerTile.worldY + (self.sprite.height/4);
+		self.sprite.bringToTop();
+		self._socket.emit('move',[tileX,tileY]);
+		return true;
 	};
 
 

@@ -47,11 +47,14 @@ function Models() {
 
 	
 	this.worldSchema = mongoose.Schema({
+		is_primary   : Boolean, //if is the primary home world for given player
 		id_player 	: String, //optional if player owned world
 		dt_create 	: {type: Date, default: Date.now },
 		npcs 		: [ { json: String, type: String, x: Number, y: Number, name: String } ],
 		last_activity : {type: Date, default: Date.now },
 		current_players: Number,
+		width 		: Number,
+		height 		: Number,
 		map 		: String, //json blob of a Map object,
 		mapData 	: String, //json of a 2d array for tile data
 		name 		: String
@@ -129,6 +132,8 @@ Models.prototype.saveWorld = function( world, cb ) {
 	world._model.name = world._name;
 	world._model.last_activity = Date.now();
 	//world._model.mapData = JSON.stringify(world._mapData);
+	world._model.width = world._width;
+	world._model.height = world._height;
 	world._model.mapData = "";
 	world._model.map = "";
 	world._model.current_players = world._current_players;
@@ -159,6 +164,9 @@ Models.prototype.loadWorld = function( player, wModel, world, cb) {
 	world._model = wModel;
 	world._name = wModel.name;
 	world._id_player = wModel.id_player;
+	world._height = wModel.height;
+	world._width = wModel.width;
+	world._is_primary = wModel.is_primary;
 	world._npcs = []; //TODO:: load npcs
 	world._current_players = 1;
 	var world_path = CONFIG.MAP_FILES+'/'+wModel._id+".map";

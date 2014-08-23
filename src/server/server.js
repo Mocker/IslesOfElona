@@ -11,13 +11,11 @@ var NPC = require('../client/NPC');
 var CONFIG = require('../cnf/Config');
 var Models = require('./inc/Models');
 var seed = require('seed-random');
+var cnf = require('../client/cnf');
 
-
-var cnf = {
-	MAX_PLAYERS: 15,
-	MAX_CONNECTIONS: 30,
-	PORT: 8001	
-};
+cnf.MAX_PLAYERS = 15;
+cnf.MAX_CONNECTIONS = 30;
+cnf.PORT = 8001;
 
 var db_connected = false;
 mongoose.connect(CONFIG.MONGO_URL);
@@ -29,6 +27,10 @@ db.once('open', function callback(){
   console.log('db connected');
   db_connected = true;
   MODELS = new Models();
+
+  //TODO:: remove when player/map gen is complete. Remove all players/maps on start to force new gen
+  MODELS.Player.find({}).remove().exec();
+  MODELS.World.find({}).remove().exec();
 
 });
 
@@ -57,6 +59,30 @@ io.on('connection', function(socket){
   });
 
   socket.ping_interval = false;
+
+  //client sends player move
+  socket.on('move', function(pos){
+    socket.player._pos = pos;
+  });
+
+  //try to load given world
+  socket.on('warp', function(id_world){
+    console.log("attempting warp to "+id_world);
+    MODELS.World.findOne({ _id : id_world }).exec(function(err,wResult){
+      if(err){
+        console.log("Nope: "+err.message); return;
+      }
+      if(!wResult){
+        console.log("No world found"); return;
+      }
+      var oldWorld = new World(wResult.width, wResult.height);
+      MODELS.loadWorld(socket.player, wResult, oldWorld, function(err, w){
+        console.log("loaded World ("+wResult.name+").. sending to player");
+        socket.player._world = w;
+        socket.emit('world', w, socket.player._pos);
+      });
+    });
+  });
 
   socket.on('login', function(params){
   	if(!params.user || params.user.length < 1){
@@ -109,7 +135,7 @@ io.on('connection', function(socket){
                     socket.emit('alert','Unable to load world');
                     return;
                   }
-                  var oldWorld = new World(100);
+                  var oldWorld = new World(cnf.WORLD_SIZE_PLAYER, cnf.WORLD_SIZE_PLAYER);
                   MODELS.loadWorld(socket.player, wResult, oldWorld, function(err, w){
                     console.log("Finished loading world! send to player");
                     socket.player._world = w;
@@ -130,12 +156,14 @@ io.on('connection', function(socket){
           players[params.user] = socket.player;
           socket.emit('login',{status:true, profile: socket.player.getProfile() } );
           socket.emit('alert', 'Generating Custom World');
-          var newWorld = new World(100);
+          var newWorld = new World(cnf.WORLD_SIZE_PLAYER, cnf.WORLD_SIZE_PLAYER);
           newWorld._model = new MODELS.World();
           newWorld._model.id_player = socket.player._model._id;
+          newWorld._model.is_primary = true;
+          newWorld._is_primary = true;
           newWorld._id_player = socket.player._model._id;
           seed(socket.player._username+"'s World", {gloal: true } );//
-          newWorld.generate( null, socket.player, function(){
+          newWorld.generate( params.user+"'s World", socket.player, function(){
             MODELS.saveWorld(newWorld,function(err,w){
               if(err) {
                 console.log("Error generating world: "+err.message);

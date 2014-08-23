@@ -8,16 +8,20 @@ if(typeof(module)!=="undefined") var cnf = require('./cnf');
 
 
 
-function World( size ) {
+function World( width, height ) {
 	this._model = false;
 	this._name = "Test World";
 	this._seed = "Test World";
-	this._size = size;
+	this._size = width;
+	this._width = width;
+	this._height = height;
 	this._id_player = null;
+	this._is_primary = false;
 	this._npcs = [];
 	this._mapData = [];
 	this._current_players = 1;
 	this._map = null;
+	this._spawnPoint = [0,0];
 	if(typeof(module) ==="undefined") this._map = new Map(); //only trigger on frontend
 
 }
