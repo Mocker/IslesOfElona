@@ -1,0 +1,98 @@
+body {
+	background-color: rgb(124, 129, 123);
+}
+
+div.navbar-inverse {
+	background-image: linear-gradient(to bottom,rgb(42, 33, 9) 0, rgb(124, 129, 123) 100%);
+	border: none;
+}
+
+div.modal {
+	position:fixed;
+	width: 50%;
+	text-align: center;
+	min-height: 50px;
+	font-size: 18px;
+	font-weight: bold;
+	margin:15% 25%;
+	z-index: 9001;
+	color: white;
+	vertical-align:middle;
+	background-color: black;
+}
+div.modal div.close {
+	z-index: 9002;
+	position: absolute;
+	float: right;
+	top: 5px;
+	right: 10px;
+	background-color: rgb(0.1,0.1,0);
+	color: white;
+	text-shadow: 0 1px 0 #DF5C5C;
+}
+
+div.navbar-header {
+	left:25%;
+	position:absolute;
+	width:50%;
+	text-align:center;
+	vertical-align:center;
+
+}
+div.navbar-header h3 {
+	color: white;
+	font-size: 25px;
+	margin:5px;
+	padding:0px;
+}
+
+div.jumbotron {
+	background: none;
+	/*background-color: rgba(0,0,0,0.5);*/
+	text-align:center;
+	position:relative;
+}
+
+div.left {
+	background-image: linear-gradient(to left,rgb(124,129,123) 0, rgb(42, 33, 9) 100%);
+	float: left;
+	width: 15%;
+	height: 100%;
+	min-width: 150px;
+	max-width: 250px;
+	position: relative;
+	top: 9%;
+	padding-left: 15px;
+	color: white;
+}
+div.left h4 {
+	text-decoration: underline;
+}
+
+div.right {
+	background-color: rgba(0,0,0,0.5);
+	background-image: linear-gradient(to right,rgb(124,129,123) 0, rgb(42, 33, 9) 100%);
+	float: right;
+	width: 15%;
+	height: 100%;
+	min-width: 150px;
+	max-width: 250px;
+	position: relative;
+	top: 9%;
+	padding-left: 15px;
+	color: white;
+}
+div.right h4 {
+	text-decoration: underline;
+}
+
+canvas {
+	border: 10px inset rgb(199, 194, 194);
+}
+
+#game_screen {
+	position:relative;
+	background-color: black;
+	border: 10px inset rgb(199, 194, 194);
+	margin-top:25px;
+}
