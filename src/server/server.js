@@ -4,13 +4,27 @@
 //var app = require('express')();
 //var http = require('http').Server(app);
 var sio = require('socket.io');
+var mongoose = require('mongoose');
 var Player = require('../client/Player');
+var CONFIG = require('../cnf/Config');
+
 
 var cnf = {
 	MAX_PLAYERS: 15,
 	MAX_CONNECTIONS: 30,
 	PORT: 8001	
 };
+
+var db_connected = false;
+mongoose.connect(CONFIG.MONGO_URL);
+var db = mongoose.connection;
+
+db.on('error', console.error.bind(console,'db connection error'));
+db.once('open', function callback(){
+  console.log('db connected');
+  db_connected = true;
+});
+
 
 var io = module.exports = sio(cnf.PORT);
 
@@ -20,8 +34,6 @@ var world = {
 	npcs : []
 };
 var players = {};
-
-
 
 
 

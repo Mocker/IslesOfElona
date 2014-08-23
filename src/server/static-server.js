@@ -3,7 +3,7 @@ var static = require('node-static');
 //
 // Create a node-static server instance to serve the './public' folder
 //
-var file = new static.Server('/home/hipster/src/public');
+var file = new static.Server('/home/ld30/src/public');
 
 require('http').createServer(function (request, response) {
     request.addListener('end', function () {

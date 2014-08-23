@@ -24,3 +24,8 @@ build/Release
 # see https://npmjs.org/doc/faq.html#Should-I-check-my-node_modules-folder-into-git
 node_modules
 
+#inbetween compiled js not used in final product
+src/dist
+
+#System specific configuration
+src/cnf
