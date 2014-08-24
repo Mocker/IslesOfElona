@@ -28,6 +28,7 @@ function World( width, height ) {
 	this._map = null;
 	this._spawnPoint = [0,0];
 	this._biome = cnf.BIOME_GRASS;
+	this._portals = [];
 	if(typeof(module) ==="undefined") this._map = new Map(); //only trigger on frontend
 
 }
@@ -128,10 +129,10 @@ World.prototype.generate = function(world_name, player, cb){
 						block = 5;
 					}
 					this._mapObjects.push({x:x,y:y, i:block,tile_i: cnf.blocks[block].tile_i });
-					if(!cnf.blocks[block].passable) this.occupiedTiles[x+','+y] = 1;
+					if(!cnf.blocks[block].passable) this.occupiedTiles[x+','+y] = ['block',this._mapObjects.length-1];
 				}
 			} else {
-				this.occupiedTiles[x+','+y] = 1;
+				this.occupiedTiles[x+','+y] = ['tile',tile_type];
 			}
 		}
 	}
@@ -139,13 +140,14 @@ World.prototype.generate = function(world_name, player, cb){
 
 	//TODO:: number and type of npcs should be based on biome and leve. Ie more friendlies in city
 	var numNPCS = Math.random()*25+10;
+	var foundTile = false; var nX=0; var nY=0; var attempts = 0;
 	for(var i=0; i<numNPCS; i++) {
 		var nType = Math.floor(Math.random()*cnf.NPC_TYPE_LIST.length);
-		var foundTile = false;
-		var attempts = 0;
+		foundTile = false;
+		attempts = 0;
 		while(attempts < 20 && !foundTile) {
-			var nX = Math.floor(Math.random()*this._width);
-			var nY = Math.floor(Math.random()*this._height);
+			nX = Math.floor(Math.random()*this._width);
+			nY = Math.floor(Math.random()*this._height);
 			if(!this.occupiedTiles[nX+","+nY] ) {
 				foundTile = [nX,nY];
 				break;
@@ -153,8 +155,33 @@ World.prototype.generate = function(world_name, player, cb){
 				attempts++;
 			}
 		}
+		if(!foundTile) continue;
 		var npc = new NPC( cnf.NPC_TYPE_LIST[nType], foundTile[0], foundTile[1] );
 		this._npcs.push(npc);
+		this.occupiedTiles[foundTile[0]+','+foundTile[1]] = ['npc', this._npcs.length-1];
+	}
+
+	var numPortals = Math.random()*25+12;
+	for(i=0;i<numPortals;i++){
+		foundTile = false;
+		attempts = 0;
+		while(attempts < 20 && !foundTile) {
+			nX = Math.floor(Math.random()*this._width);
+			nY = Math.floor(Math.random()*this._height);
+			if(!this.occupiedTiles[nX+","+nY] ) {
+				foundTile = [nX,nY];
+				break;
+			} else {
+				attempts++;
+			}
+		}
+		if(!foundTile) continue;
+		var portal = new Item('portal', foundTile[0],foundTile[1] );
+		portal._name = 'Mysterious Portal';
+		portal._properties.is_explored = false;	
+		this._portals.push(portal);
+		this.occupiedTiles[foundTile[0]+','+foundTile[1]] = ['portal', this._portals.length-1];
+	
 	}
 
 

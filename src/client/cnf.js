@@ -157,6 +157,24 @@ var cnf = {
 
 cnf.NPC_ATLAS = {
 	frames : {
+		portal : {
+			frame: { x:768, y:1008, w:48, h:96 },
+			rotated: false,
+			trimmed: false,
+			is_portal : true
+		},
+		portal2 : {
+			frame: { x:816, y:1008, w:48, h:96 },
+			rotated: false,
+			trimmed: false,
+			is_portal : true
+		},
+		portal3 : {
+			frame: { x:864, y:1008, w:48, h:96 },
+			rotated: false,
+			trimmed: false,
+			is_portal : true
+		},
 		npcguy : {
 			frame: { x:48, y:0, w:48, h:48 },
 			rotated: false,
@@ -188,9 +206,42 @@ cnf.NPC_ATLAS = {
 cnf.NPC_TYPES = {};
 cnf.NPC_TYPE_LIST = [];
 for(var title in cnf.NPC_ATLAS.frames){
+	if(title=='portal'||title=='portal2'||title=='portal3') continue;
 	cnf.NPC_TYPES[title] = cnf.NPC_ATLAS.frames[title];
 	cnf.NPC_TYPE_LIST.push(title);
 }
+
+cnf.ITEM_ATLAS = {
+	frames : {
+		longstick : {
+			frame: { x:48, y:0, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		},
+		bullet : {
+			frame: { x:96, y:0, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		},
+		waterwisp : {
+			frame: { x:144, y:0, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		},
+		purplesplash : {
+			frame: { x:192, y:0, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		}
+	}
+};
+cnf.ITEM_TYPES = {};
+cnf.ITEM_TYPE_LIST = [];
+for(var title in cnf.ITEM_ATLAS.frames){
+	cnf.ITEM_TYPES[title] = cnf.ITEM_ATLAS.frames[title];
+	cnf.ITEM_TYPE_LIST.push(title);
+}
+
 
 cnf.TILES_MAX = cnf.tiles.length;
 

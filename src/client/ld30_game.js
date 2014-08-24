@@ -12,6 +12,7 @@ CreateGame = function(canvas_id, opts) {
 	this._world = false;
 	this._player = false;
 	this._primary_world = false;
+	this._player_list = {}; //active players on the same map
 
 	if(!this._canvasE) {
 		alert("Missing canvas!"); return false;
@@ -41,6 +42,7 @@ CreateGame = function(canvas_id, opts) {
 			$('#info_server').html('Connected');
 			hideSpinner();
 			self._connected = true;
+			/*
 			if(!self._world ) $('#login_modal').modal('show');
 			else {
 				//TODO:: relogin automatically
@@ -48,7 +50,7 @@ CreateGame = function(canvas_id, opts) {
 				self._login_params.id_world = self._world._model._id;
 				self._socket.emit('login',self._login_params);
 				showSpinner("Reconnecting..");
-			}
+			} */
 			console.log('socket connect');
 			//$('#login_modal').css('display','block');
 		});
@@ -57,7 +59,7 @@ CreateGame = function(canvas_id, opts) {
 			showSpinner("Server Disconnected");
 			self.playable = false; 
 			self._connected = false;
-			self._socket.disconnect();
+			//self._socket.disconnect();
 		});
 		this._socket.on('disconnect',function(){
 			$('#info_server').html('Disconnected');
@@ -74,13 +76,14 @@ CreateGame = function(canvas_id, opts) {
 		this._socket.on('pc',function(data){ //pc stats changed
 			if(data.name == self._player._username) return;
 			console.log('pc',data);
-			if( !self._world._player_list[data.name]  ) return;
+			if( !self._player_list[data.name]  ) return;
 			if(data.pos){
-				self.movePlayerTo(pos[0],pos[1], self._world._player_list[data.name] );
+				self.movePlayerTo(pos[0],pos[1], self._player_list[data.name] );
 			}
 		});
 		this._socket.on('pc list', function(plist){ //list of pcs in the same world
 			console.log('pc list', plist);
+			self.clearPlayerSprites();
 			for(var i in plist) {
 				if(plist[i].name==self._player._username) continue;
 				var pStyle = {font:"12px Arial", fill:"#ff0044",align:"center"};
@@ -101,7 +104,7 @@ CreateGame = function(canvas_id, opts) {
 				p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle);
 				p.sprite.bringToTop();
 				p.label.bringToTop();
-				self._world._player_list[plist[i].name] = p;
+				self._player_list[plist[i].name] = p;
 			}
 		});
 		this._socket.on('pc join', function(pl){ //player joined world
@@ -124,15 +127,15 @@ CreateGame = function(canvas_id, opts) {
 				p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle);
 				p.sprite.bringToTop();
 				p.label.bringToTop();
-				self._world._player_list[pl.name] = p;
+				self._player_list[pl.name] = p;
 				console.log(self._world._player_list);
 		});
 		this._socket.on('pc leave', function(data){
 			if(self._player._username==data.name) return;
 			console.log('pc leave', data);
-			if(!self._world._player_list[data.name] ) return;
-			if( self._world._player_list[data.name].sprite ) self._world._player_list[data.name].sprite.destroy(true);
-			delete( self._world._player_list[data.name] );
+			if(!self._player_list[data.name] ) return;
+			if( self._player_list[data.name].sprite ) self._player_list[data.name].sprite.destroy(true);
+			delete( self._player_list[data.name] );
 		});
 
 		this._socket.on('login', function(resp){
@@ -152,6 +155,7 @@ CreateGame = function(canvas_id, opts) {
 					self._player.updateDisplay();
 					showSpinner("Loading "+self._player._zone); 
 				} else {
+					console.log("Reconnected");
 					hideSpinner();
 					self.playable = true;
 				}
@@ -229,6 +233,7 @@ CreateGame = function(canvas_id, opts) {
 		self._p.load.image('tileset_map','assets/elona/map1tp.png');
 		self._p.load.spritesheet('chr1', 'assets/elona/char1.png',32,48);
 		self._p.load.atlasJSONHash('npcs', 'assets/elona/npcs.png', null, cnf.NPC_ATLAS);
+		self._p.load.atlasJSONHash('npcs', 'assets/elona/items.png', null, cnf.ITEM_ATLAS);
 		//self._p.load.tilemap('blank_map0','json/blank_map0.json', null, Phaser.Tilemap.TILED_JSON);
 	};
 
@@ -276,7 +281,7 @@ CreateGame = function(canvas_id, opts) {
 		}
 		*/
 		self._p.camera.follow(self.sprite);
-		/* creating a world locally for testing
+		/* creating a world locally for testing */
 		self.test_world = new World(60,30);
 		self.test_world._biome = cnf.BIOME_SNOW ;
 		self.test_world.generate('Test World', self._player, function(err,w){
@@ -285,7 +290,7 @@ CreateGame = function(canvas_id, opts) {
 			if(!self._player._pos) self._player._pos = [ 20, 20];
 			self.loadWorld( self._player._pos );
 		});
-		*/
+		
 		
 	};
 
@@ -367,13 +372,25 @@ CreateGame = function(canvas_id, opts) {
 		//self.map.setLayer('world');
 		console.log("map layer set");
 		//TODO:: load npcs /objects
+		var nTile = null;
 		for(i=0;i<self._world._npcs.length;i++) {
-			var nTile = self.map.getTile(self._world._npcs[i]._x, self._world._npcs[i]._y,'world');
+			nTile = self.map.getTile(self._world._npcs[i]._x, self._world._npcs[i]._y,'world');
 			self._world._npcs[i].curTile = nTile;
 			self._world._npcs[i].sprite = self._p.add.sprite( nTile.worldX, nTile.worldY,'npcs', self._world._npcs[i]._type  );
 			self._world._npcs[i].sprite.anchor.setTo(0.5,0.5);
 			self._world._npcs[i].sprite.y += self._world._npcs[i].sprite.height/4;
 			self._world._npcs[i].sprite.x += self._world._npcs[i].sprite.width/2;
+		}
+		//build portal sprites
+		for(i=0;i<self._world._portals.length;i++) {
+			nTile = self.map.getTile(self._world._portals[i]._x, self._world._portals[i]._y,'world');
+			self._world._portals[i].curTile = nTile;
+			self._world._portals[i].sprite = self._p.add.sprite( nTile.worldX, nTile.worldY,'npcs'  );
+			self._world._portals[i].sprite.animations.add('bzz',['portal','portal2', 'portal3','portal2'],(Math.random()*8+2), true);
+			self._world._portals[i].sprite.animations.play('bzz');
+			self._world._portals[i].sprite.anchor.setTo(0.5,0.5);
+			//self._world._portals[i].sprite.y += self._world._portals[i].sprite.height/4;
+			self._world._portals[i].sprite.x += self._world._portals[i].sprite.width/2;
 		}
 
 		var centerX = Math.floor(self._world._width/2); //TODO:: player pos sent from server
@@ -404,6 +421,12 @@ CreateGame = function(canvas_id, opts) {
 		if(blockTile && !blockTile.properties.passable ) return false;
 		console.log(centerTile);
 		if( centerTile.properties.passable ===false ) return false;
+
+		if( self._world.occupiedTiles[tileX+','+tileY]){
+			console.log("Tile occupied");
+			return false;
+		}
+
 		$('#info_position').html( tileX+' , '+tileY);
 		//TODO:: send move request to server
 		if(pc) { //move another player instead of you
@@ -440,6 +463,13 @@ CreateGame = function(canvas_id, opts) {
 		self._socket.emit('login',params);
 	};
 
+	this.clearPlayerSprites = function() {
+		//delete sprites for other players and clear list
+		for(var i in self._player_list) {
+			self._player_list.sprite.destroy();
+		}
+		self._player_list = {};
+	};
 
 
 	return self;
