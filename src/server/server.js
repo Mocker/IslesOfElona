@@ -78,7 +78,10 @@ io.on('connection', function(socket){
   socket.on('move', function(pos){
     //TODO:: verify moves are ok
     socket.player._pos = pos;
-    if(socket.player._world) io.to( socket.player._world._model._id ).emit('pc',{name: socket.player._username, pos: pos} );
+    if(socket.player._world) {
+        console.log("Emitting move for "+socket.player._username+" to "+socket.player._world._model._id);
+        io.to( socket.player._world._model._id ).emit('pc',{name: socket.player._username, pos: pos} );
+    }
   });
 
   //try to load given world
@@ -163,12 +166,14 @@ io.on('connection', function(socket){
   			socket.emit('login',{status:false,err:'invalid password'});
  			return;
   		}
+      io.emit('player login',socket.player._username);
   		socket.player = players[params.user];
   		players[params.user].setSocket(socket);
   		socket.emit('login', {status:true, profile: socket.player.getProfile() } );
       console.log("Login sent");
       if(params.id_world) { //player is reconnecting don't need to send the world, just current position
         socket.emit('info',{position:socket.player._pos});
+        socket.join(socket.player._world._model._id);
         return;
       }
 

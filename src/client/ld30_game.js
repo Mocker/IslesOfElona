@@ -125,6 +125,7 @@ CreateGame = function(canvas_id, opts) {
 				p.sprite.bringToTop();
 				p.label.bringToTop();
 				self._world._player_list[pl.name] = p;
+				console.log(self._world._player_list);
 		});
 		this._socket.on('pc leave', function(data){
 			if(self._player._username==data.name) return;
