@@ -51,6 +51,7 @@ function Models() {
 		id_player 	: String, //optional if player owned world
 		dt_create 	: {type: Date, default: Date.now },
 		npcs 		: [ { json: String, type: String, x: Number, y: Number, name: String } ],
+		portals     : [ { json: String, name: String, is_explored:Boolean, x: Number, y: Number, id_world: String, remote_id: Number}],
 		last_activity : {type: Date, default: Date.now },
 		current_players: Number,
 		width 		: Number,
@@ -129,6 +130,20 @@ Models.prototype.saveWorld = function( world, cb ) {
 		 });
 	}
 	world._model.npcs = npcs;
+	//portals     : [ { json: String, name: String, x: Number, y: Number, id_world: String, remote_portal: Number}],
+	var portals = [];
+	for( i=0;i<world._portals.length;i++) {
+		portals.push({
+			json : JSON.stringify(world._portals[i]),
+			name : world._portals[i]._name,
+			x : world._portals[i]._x,
+			y : world._portals[i]._y,
+			is_explored : (world._portals[i]._properties.is_explored?world._portals[i]._properties.is_explored:null),
+			id_world : (world._portals[i]._properties.id_world?world._portals[i]._properties.id_world:null),
+			remote_portal : (world._portals[i]._properties.remote_id?world._portals[i]._properties.remote_id:null)
+		});
+	}
+	world._model.portals = portals;
 	world._model.name = world._name;
 	world._model.last_activity = Date.now();
 	//world._model.mapData = JSON.stringify(world._mapData);
@@ -145,6 +160,7 @@ Models.prototype.saveWorld = function( world, cb ) {
 		}
 		var world_id = world._model._id;
 		var world_path = CONFIG.MAP_FILES+'/'+world_id+".map";
+		//TODO:: save mapObject and items in the file as well 
 		fs.writeFile(world_path, JSON.stringify(world._mapData), function(err){
 			if(err){
 				console.log("Unable to write map file! "+err.message);
@@ -168,6 +184,7 @@ Models.prototype.loadWorld = function( player, wModel, world, cb) {
 	world._width = wModel.width;
 	world._is_primary = wModel.is_primary;
 	world._npcs = []; //TODO:: load npcs
+	world._portals = []; //TODO:: load portals
 	world._current_players = 1;
 	var world_path = CONFIG.MAP_FILES+'/'+wModel._id+".map";
 	fs.readFile(world_path, {}, function(err, data){

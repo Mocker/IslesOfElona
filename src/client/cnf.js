@@ -5,8 +5,8 @@ var cnf = {
 	title : 'Ludum Dare 30',
 	ws_server: 'http://10.0.33.34:8001',
 
-	WORLD_SIZE_PLAYER : 100,
-	WORLD_SIZE_MAX : 140,
+	WORLD_SIZE_PLAYER : 60,
+	WORLD_SIZE_MAX : 100,
 	WORLD_SIZE_MIN : 40,
 
 	BIOME_GRASS 	: 0,
@@ -14,6 +14,7 @@ var cnf = {
 	BIOME_DESERT 	: 2,
 	BIOME_CITY 		: 3,
 	BIOME_FOREST 	: 4,
+	
 
 	TILES_MAX 		: 4,
 	TILE_TREE 		: 0,
@@ -199,14 +200,28 @@ cnf.NPC_ATLAS = {
 			frame: { x:48, y:48, w:48, h:48 },
 			rotated: false,
 			trimmed: false
+		},
+		bloodspurt : {
+			frame : { x:53, y:1160, w:38, h:40 },
+			rotated: false,
+			trimmed: false,
+			not_npc: true
 		}
 	}
 };
+
+cnf.BIOMES  = [ //list of possible biomes. repeated means more likely to get picked at random
+		cnf.BIOME_GRASS, cnf.BIOME_GRASS,cnf.BIOME_GRASS,cnf.BIOME_GRASS,
+		cnf.BIOME_SNOW,  cnf.BIOME_SNOW,
+		cnf.BIOME_FOREST, cnf.BIOME_FOREST,
+		cnf.BIOME_DESERT
+	];
 
 cnf.NPC_TYPES = {};
 cnf.NPC_TYPE_LIST = [];
 for(var title in cnf.NPC_ATLAS.frames){
 	if(title=='portal'||title=='portal2'||title=='portal3') continue;
+	if(cnf.NPC_ATLAS.frames[title].not_npc) continue;
 	cnf.NPC_TYPES[title] = cnf.NPC_ATLAS.frames[title];
 	cnf.NPC_TYPE_LIST.push(title);
 }

@@ -13,6 +13,7 @@ CreateGame = function(canvas_id, opts) {
 	this._player = false;
 	this._primary_world = false;
 	this._player_list = {}; //active players on the same map
+	this._local = false;
 
 	if(!this._canvasE) {
 		alert("Missing canvas!"); return false;
@@ -24,6 +25,7 @@ CreateGame = function(canvas_id, opts) {
 	this.init = function(){
 		this._p = new Phaser.Game(this._canvasW, this._canvasH, Phaser.CANVAS, this._canvasID,{ preload: this.preload, create: this.create, update: this.update, render: this.render} );
 		this._socket = io(cnf.ws_server);
+		this.ui = new UI(this);
 		var self = this;
 		$('#info_server').html('Connecting..');
 		$('#frm_msg').on('submit',function(evt){ 
@@ -42,16 +44,17 @@ CreateGame = function(canvas_id, opts) {
 			$('#info_server').html('Connected');
 			hideSpinner();
 			self._connected = true;
-			/*
-			if(!self._world ) $('#login_modal').modal('show');
-			else {
-				//TODO:: relogin automatically
-				console.log("attempting to login automatically");
-				self._login_params.id_world = self._world._model._id;
-				self._socket.emit('login',self._login_params);
-				showSpinner("Reconnecting..");
-			} */
-			console.log('socket connect');
+			if(!self._local) {
+				if(!self._world ) $('#login_modal').modal('show');
+				else {
+					//TODO:: relogin automatically
+					console.log("attempting to login automatically");
+					self._login_params.id_world = self._world._model._id;
+					self._socket.emit('login',self._login_params);
+					showSpinner("Reconnecting..");
+				} 
+				console.log('socket connect');
+			}
 			//$('#login_modal').css('display','block');
 		});
 		this._socket.on('connect_error',function(){
@@ -83,29 +86,9 @@ CreateGame = function(canvas_id, opts) {
 		});
 		this._socket.on('pc list', function(plist){ //list of pcs in the same world
 			console.log('pc list', plist);
-			self.clearPlayerSprites();
-			for(var i in plist) {
-				if(plist[i].name==self._player._username) continue;
-				var pStyle = {font:"12px Arial", fill:"#ff0044",align:"center"};
-				var p = new Player(plist[i].name,'');
-				p._pos = plist[i].pos;
-				p.sprite = self._p.add.sprite(10,10,'chr1');
-				p.sprite.animations.add('walk',[0,1,2,3]);
-				p.sprite.animations.add('stand',[0]);
-				p.sprite.animations.play('stand', 0);
-				p.sprite.animations.add('walk_left',[4,5,6,7]);
-				p.sprite.animations.add('walk_right',[8,9,10,11]);
-				p.sprite.animations.add('walk_up',[12,13,14,15]);
-				p.sprite.anchor.setTo(0.5, 0.5);
-				p.sprite.z = 10;
-				p.curTile = self.map.getTile(p._pos[0], p._pos[1], 'world');
-				p.sprite.x = p.curTile.worldX + (p.sprite.width/2);
-				p.sprite.y = p.curTile.worldY + (p.sprite.height/4);
-				p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle);
-				p.sprite.bringToTop();
-				p.label.bringToTop();
-				self._player_list[plist[i].name] = p;
-			}
+			self.loadPlayers(plist);
+			
+
 		});
 		this._socket.on('pc join', function(pl){ //player joined world
 			if(pl.name==self._player._username) return;
@@ -261,11 +244,15 @@ CreateGame = function(canvas_id, opts) {
 		console.log("sprite created", self.sprite);
 
 		self.cursors = self._p.input.keyboard.createCursorKeys();
+		self.cursors.space = self._p.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+		self.cursors.enter = self._p.input.keyboard.addKey(Phaser.Keyboard.ENTER);
 		//self._p.input.keyboard.addKeyCapture([ Phaser.Keyboard.LEFT, Phaser.Keyboard.RIGHT, Phaser.Keyboard.DOWN, Phaser.Keyboard.UP]);
 		self.cursors.left.onDown.add(self.left);
 		self.cursors.up.onDown.add(self.up);
 		self.cursors.down.onDown.add(self.down);
 		self.cursors.right.onDown.add(self.right);
+		self.cursors.enter.onDown.add(self.space);
+		self.cursors.space.onDown.add(self.space);
 		self.playable = true;
 		self.layer.debug = true;
 		self.map.fill(0,0,0,20,20,self.map.currentLayer);
@@ -282,14 +269,17 @@ CreateGame = function(canvas_id, opts) {
 		*/
 		self._p.camera.follow(self.sprite);
 		/* creating a world locally for testing */
-		self.test_world = new World(60,30);
-		self.test_world._biome = cnf.BIOME_SNOW ;
-		self.test_world.generate('Test World', self._player, function(err,w){
-			console.log('test world generated');
-			self._world = self.test_world;
-			if(!self._player._pos) self._player._pos = [ 20, 20];
-			self.loadWorld( self._player._pos );
-		});
+		if(self._local) {
+			self.test_world = new World(60,30);
+			self.test_world._biome = -1 ;
+			self.test_world.generate('Test World', self._player, function(err,w){
+				console.log('test world generated');
+				self._world = self.test_world;
+				if(!self._player._pos) self._player._pos = [ 20, 20];
+				self.loadWorld( self._player._pos );
+			});
+		}
+		
 		
 		
 	};
@@ -301,6 +291,7 @@ CreateGame = function(canvas_id, opts) {
 	//movement keys
 	//TODO:: speed /prevent key spamming. Check for movement modifiers (character is stuck etc)
 	this.up = function() {
+		if(self.menuOpen) { self.ui.keyPress('up'); return;}
 		if(!self.playable) return;
 		var newTile = self.map.getTileAbove(0, self.curTile.x, self.curTile.y );
 		var isMoved = false;
@@ -308,6 +299,7 @@ CreateGame = function(canvas_id, opts) {
 		if(isMoved) self.sprite.animations.play('walk_up',3);
 	};
 	this.down = function() {
+		if(self.menuOpen) { self.ui.keyPress('down'); return;}
 		if(!self.playable) return;
 		var newTile = self.map.getTileBelow(0, self.curTile.x, self.curTile.y );
 		var isMoved = false;
@@ -315,7 +307,7 @@ CreateGame = function(canvas_id, opts) {
 		if(isMoved) self.sprite.animations.play('walk',3);
 	};
 	this.left = function() {
-		console.log("left!");
+		if(self.menuOpen) { self.ui.keyPress('left'); return;}
 		if(!self.playable) return;
 		var newTile = self.map.getTileLeft(0, self.curTile.x, self.curTile.y );
 		var isMoved = false;
@@ -323,11 +315,15 @@ CreateGame = function(canvas_id, opts) {
 		if(isMoved) self.sprite.animations.play('walk_left',3);
 	};
 	this.right = function() {
+		if(self.menuOpen) { self.ui.keyPress('right'); return;}
 		if(!self.playable) return;
 		var newTile = self.map.getTileRight(0, self.curTile.x, self.curTile.y );
 		var isMoved = false;
 		if(newTile) isMoved = self.movePlayerTo(newTile.x, newTile.y);
 		if(isMoved) self.sprite.animations.play('walk_right',3);
+	};
+	this.space = function(){
+		if(self.menuOpen){ self.ui.keyPress('space'); return; }
 	};
 
 	this.render = function() {
@@ -338,7 +334,7 @@ CreateGame = function(canvas_id, opts) {
 	this.loadWorld = function(newPos) {
 		
 		showAlert("World data received - creating display");
-		console.log("world data recieived - creating display");
+		console.log("world data recieived - creating display",newPos);
 		$('#info_zone').html(self._world._name);
 		var world_layer = self.map.getLayer('world');
 		wl = self.map.create('world', self._world._mapData.length, self._world._mapData[0].length, 48, 48);
@@ -423,7 +419,36 @@ CreateGame = function(canvas_id, opts) {
 		if( centerTile.properties.passable ===false ) return false;
 
 		if( self._world.occupiedTiles[tileX+','+tileY]){
-			console.log("Tile occupied");
+			var oc = self._world.occupiedTiles[tileX+','+tileY];
+			console.log("Tile occupied", oc);
+			if(oc[0]=='npc'){ //silly blood effects
+				var em = self._p.add.emitter(centerTile.worldX+centerTile.width/2, centerTile.worldY+centerTile.height/2, 30);
+				em.makeParticles('npcs',['bloodspurt']);
+				em.maxParticleSpeed = 8.5;
+				em.start(true,1500,3);
+				var npc = self._world._npcs[oc[1]];
+				if(npc && !npc.lbl) {
+					npc.lbl = self._p.add.text(npc.sprite.x-10,npc.sprite.y-35,"Oof!",{font:'14px Arial',fill:'#330000'});
+					setTimeout(function(){
+						npc.lbl.destroy();
+						npc.lbl = false;
+					},2500);
+				}
+			} else if(oc[0]=='portal') {
+				var portal = self._world._portals[oc[1]];
+				var m = {
+					header : portal._name,
+					msg : 'This portal leads to another world which may be dangerous but also full of wonders. Step through at your own peril',
+					menu : [
+						{txt:'Step Away'},
+						{txt:'Bravely Pass Through', cb: function(){
+							self.activatePortal(oc[1]);	
+						} }
+					]
+				};
+				console.log("showing portal menu");
+				self.ui.showMenu(m);
+			}
 			return false;
 		}
 
@@ -453,6 +478,23 @@ CreateGame = function(canvas_id, opts) {
 		return true;
 	};
 
+	this.activatePortal = function( portal_i ) {
+		if(!self._world._portals[portal_i]){
+			showAlert("Unable to find portal "+portal_i+"!");
+			self.ui.closeMenu();
+		}
+		console.log("load world! ",self._world._portals[portal_i]);
+		showSpinner("Activating World Portal");
+		self.ui.closeMenu();
+		self.playable = false;
+		var params = {portal_i:portal_i};
+		if( self._world._portals[portal_i]._properties.is_explored ) {
+			params.id_world = self._world._portals[portal_i]._properties.id_world;
+			params.to_portal = self._world._portals[portal_i]._properties.remote_id;
+		}
+		self._socket.emit('warp',{portal_i:portal_i});
+	};
+
 
 	this.doLogin = function(params) {
 		if(!self._connected){
@@ -463,12 +505,48 @@ CreateGame = function(canvas_id, opts) {
 		self._socket.emit('login',params);
 	};
 
+	this.loadPlayers = function(plist) {
+		self.clearPlayerSprites();
+		console.log("loadPlayers sprites cleared");
+		for(var i in plist) {
+			console.log(plist[i].name);
+			if(plist[i].name==self._player._username) continue;
+			var pStyle = {font:"12px Arial", fill:"#ff0044",align:"center"};
+			var p = new Player(plist[i].name,'');
+			self._player_list[ plist[i].name ] = p;
+			p._pos = plist[i].pos;
+			p.sprite = self._p.add.sprite(10,10,'chr1');
+			p.sprite.animations.add('walk',[0,1,2,3]);
+			p.sprite.animations.add('stand',[0]);
+			p.sprite.animations.play('stand', 0);
+			p.sprite.animations.add('walk_left',[4,5,6,7]);
+			p.sprite.animations.add('walk_right',[8,9,10,11]);
+			p.sprite.animations.add('walk_up',[12,13,14,15]);
+			p.sprite.anchor.setTo(0.5, 0.5);
+			p.sprite.z = 10;
+			p.curTile = self.map.getTile(p._pos[0], p._pos[1], 'world');
+			p.sprite.x = p.curTile.worldX + (p.sprite.width/2);
+			p.sprite.y = p.curTile.worldY + (p.sprite.height/4);
+			p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle);
+			p.sprite.bringToTop();
+			p.label.bringToTop();
+			self._player_list[plist[i].name] = p;
+			console.log("added player",p);
+		}
+		console.log("loaded players",self._player_list.length);
+	};
+
 	this.clearPlayerSprites = function() {
 		//delete sprites for other players and clear list
 		for(var i in self._player_list) {
 			self._player_list.sprite.destroy();
 		}
 		self._player_list = {};
+	};
+
+	this.closeMenu = function() {
+		self.menuOpen = false;
+		self.menu = false;
 	};
 
 

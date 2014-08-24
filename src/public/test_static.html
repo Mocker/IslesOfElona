@@ -124,6 +124,7 @@
 <div id='login_modal' class='modal' style='height:300px;'>
 	<form id="frm_login" onSubmit="return false;">
 	<div class='msg'><p>Login to the game. Enter a username and password you'd like to use, or your previous one to reconnect to an existing character</p>
+	</div>
 	<div class="form-group">
 		<label for="username">Username</label>
 		<input type="text" class="form-control" id="txtUsername" value="Ryan">
@@ -138,14 +139,14 @@
 	</form>
 </div>
 
-<div id='menu_modal' class='modal' style='height:300px;'>
+<div id='menu_modal' class='modal'>
+	<div id='menu_image'><img></div>
 	<h3>MENU TITLE</h3>
-	<hr>
 	<div>
 		<div id='menu_text'>MENU TEXT</div>
 		<div id='menu_list_div'>
 			<ul id='menu_list'>
-				<li class='menu_list'>Sample Option</li>
+				<li class='menu_list menu_selected'><div>Sample Option</div></li>
 			</ul>
 		</div>
 	</div>
@@ -172,6 +173,9 @@ $('div.modal').each(function(o){
 	$(dc).attr('data-modal', $(this).attr('id') );
 	$(dc).click(function( ){
 		var close_id = $(this).attr('data-modal');
+		if(close_id=='menu_modal'){
+			if(game) game.closeMenu();
+		}
 		$('#'+close_id).modal('hide');
 	});
 	$(this).append(dc);

@@ -7,6 +7,7 @@
 if(typeof(module)!=="undefined") var cnf = require('./cnf');
 if(typeof(module)!=="undefined") var SimplexNoise = require('./SimplexNoise');
 if(typeof(module)!=="undefined") var NPC = require('./NPC');
+if(typeof(module)!=="undefined") var Item = require('./Item');
 
 
 
@@ -35,11 +36,16 @@ function World( width, height ) {
 
 
 //random world gen
-World.prototype.generate = function(world_name, player, cb){
+World.prototype.generate = function(world_name, player, opts, cb){
 	this._name = (world_name)?world_name: player._name+"'s World";
 	this._seed = this._name; //name can change later seed stays the same
 	console.log("Generating world "+this._name+" ["+this._biome+"] size "+this._size+" for "+player._username+" : "+typeof(cb));
 	//TODO:: actual algorithms and shit
+	if(this._biome===-1) { //pick a random biome
+		this._biome = cnf.BIOMES[ Math.floor( Math.random()*cnf.BIOMES.length) ];
+	}
+	console.log("Generating biome: "+this._biome);
+
 	var Simplex = new SimplexNoise();
 	var simplex_jitter = 6; //1-very smooth tiling, higher than 5 or 6 means more erratic
 
@@ -177,12 +183,23 @@ World.prototype.generate = function(world_name, player, cb){
 		}
 		if(!foundTile) continue;
 		var portal = new Item('portal', foundTile[0],foundTile[1] );
-		portal._name = 'Mysterious Portal';
-		portal._properties.is_explored = false;	
+		if(opts.link_portal && !opts.link_portal.linked) {
+			portal._name = 'Portal to '+opts.link_portal.world_name;
+			portal._properties.is_explored = true;
+			portal._properties.id_world = opts.link_portal.id_world;
+			portal._properties.remote_id = opts.link_portal.id_portal;
+			opts.link_portal.linked = true;
+			this.linked_portal = this._portals.length;
+		} else {
+			portal._name = 'Mysterious Portal';
+			portal._properties.is_explored = false;	
+		}
+		portal.i = this._portals.length;
 		this._portals.push(portal);
 		this.occupiedTiles[foundTile[0]+','+foundTile[1]] = ['portal', this._portals.length-1];
 	
 	}
+
 
 
 	if(cb) cb();

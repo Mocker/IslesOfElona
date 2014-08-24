@@ -9,6 +9,7 @@ function Item(type,x,y) {
 	this._y = y;
 	this._name = "Test "+type+" Object";
 	this._sprite = null;
+	this.i = 0;
 	this._properties = {};
 
 	if( typeof(module) === "undefined" ){

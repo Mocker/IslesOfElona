@@ -85,7 +85,102 @@ io.on('connection', function(socket){
   });
 
   //try to load given world
-  socket.on('warp', function(id_world){
+  socket.on('warp', function(params){
+    var id_world = null;
+    var prev_world = socket.player._model._id_world;
+    var portal_used = null;
+    var portal_dest = null; //destination portal to warp on
+    if(typeof(params)=="string"){
+      id_world = params;
+    } else if(params.id_world) {
+        id_world = params.id_world;
+        if(params.portal_to) { portal_dest = params.portal_to; }
+    } else {
+        //TODO::
+        //warp can be from a portal to a known destination
+        //or it could be an unexplored portal whereby we need to select an existing worl or create a new one
+        //before leaving previous world we need to update its portal as discovered and the new ones id
+        //and in the new one we need to update an undiscovered portal or create a new one with an id back to the old
+        var rand = Math.random();
+        console.log("Generating portal endpoint");
+        MODELS.World.count({},function(err,count){
+          console.log("Currently "+count+" worlds in db");
+          if( count > 24 && rand > 0.6 ) { //chance of linking to existing world or creating a new one
+             rand = Math.floor(Math.random()*count);
+             MODELS.World.find({},{},{skip:rand,limit:1},function(err,w){
+                if(err){
+                  console.log("Error fetching world!: "+err.message ); return;
+                }
+                console.log("Picked a random world to link to portal! "+typeof(w));
+             });
+          } else {
+            console.log("Create new world and link to this portal!");
+            //TODO:: world generation should really be it's own function
+            rand = Math.floor( Math.random()*(cnf.WORLD_SIZE_MAX-cnf.WORLD_SIZE_MIN)+cnf.WORLD_SIZE_MIN);
+            var newWorld = new World(rand, rand);
+            newWorld._model = new MODELS.World();
+            newWorld._model.is_primary = false;
+            newWorld._is_primary = false;
+            var name = makeid(8);
+            seed(name, {global: true } );
+            newWorld._biome = -1; //pick at random
+            var opts = {
+              link_portal : {
+                id_world : prev_world,
+                world_name : socket.player._world._name,
+                id_portal : (params&&params.portal_i)?params.portal_i:0
+              }
+            };
+            newWorld.generate( name , socket.player, opts, function(){
+              MODELS.saveWorld(newWorld,function(err,w){
+                if(err) {
+                  console.log("Error generating world: "+err.message);
+                  socket.emit('alert','Unable to generate world: '+err.message);
+                } else {
+                  //TODO : move removing player from world to another function 
+                  socket.player._world._current_players -= 1;
+                  delete(socket.player._world._player_list[socket.player._model._id]);
+                  io.to(socket.player._world._model._id).emit('pc leave',{name:socket.player._username});
+                  socket.leave(socket.player._world._model._id);
+                  if(params.portal_i) {
+                    //update portal on old world to have this id
+                    socket.player._world._portals[params.portal_i]._properties.is_explored = true;
+                    socket.player._world._portals[params.portal_i]._name = "Portal to "+w._name;
+                    socket.player._world._portals[params.portal_i]._properties.id_world = w._model._id;
+                    socket.player._world._portals[params.portal_i]._properties.remote_id = w.linked_portal;
+                    MODELS.saveWorld( socket.player._world, function(err,r){ console.log("Previous world portal updated"); });
+                  }
+
+                  console.log("saveWorld returned");
+                  w._player_list[socket.player._model._id] = socket.player;
+                  active_worlds[w._model._id] = w;
+                  socket.player._world = w;
+                  socket.player._zone = w._name;
+                  socket.player._model.id_world = w._model._id;
+                  socket.player._model.save(function(err,w){
+                    if(err){
+                      console.log("Couldn't update player model to new world! "+err.message);
+                    } else { console.log("Player saved"); }
+                  });
+                  socket.emit('alert','World Finished.. loading');
+                  socket.join(w._model._id);
+
+                  var pList = w._player_list;
+                  w._player_list = {};
+                  var wString = JSON.stringify(w);
+                  if(w.linked_portal) socket.player._pos = [w._portals[w.linked_portal]._x, w._portals[w.linked_portal]._y ];
+                  socket.emit('world', w, socket.player._pos);
+                  w._player_list  = pList;
+                  console.log("world sent");
+                }
+              });
+          });
+        }
+      });//end model count
+      return;
+    }
+
+
     console.log("attempting warp to "+id_world);
     var old_id = socket.player._model.id_world;
     if(active_worlds[id_world]) {
@@ -262,8 +357,9 @@ io.on('connection', function(socket){
           newWorld._model.is_primary = true;
           newWorld._is_primary = true;
           newWorld._id_player = socket.player._model._id;
-          seed(socket.player._username+"'s World", {gloal: true } );//
-          newWorld.generate( params.user+"'s World", socket.player, function(){
+          seed(socket.player._username+"'s World", {global: true } );
+          newWorld._biome = -1; //pick at random
+          newWorld.generate( params.user+"'s World", socket.player, {}, function(){
             MODELS.saveWorld(newWorld,function(err,w){
               if(err) {
                 console.log("Error generating world: "+err.message);
@@ -327,4 +423,15 @@ function getWorldPlayers ( w ) {
 //every __ minutes, save world to db and file for recovery
 function update_world ( w ) {
 
+}
+
+function makeid(len)
+{
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+    for( var i=0; i < len; i++ )
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+    return text;
 }
