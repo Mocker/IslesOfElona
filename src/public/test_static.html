@@ -122,6 +122,7 @@
 </div>
 
 <div id='login_modal' class='modal' style='height:300px;'>
+	<form id="frm_login" onSubmit="return false;">
 	<div class='msg'><p>Login to the game. Enter a username and password you'd like to use, or your previous one to reconnect to an existing character</p>
 	<div class="form-group">
 		<label for="username">Username</label>
@@ -132,8 +133,9 @@
 		<input type="password" class="form-control" id="txtPassword" value="p">
 	</div>
 	<div class="form-group">
-		<button id='btnLogin' class="btn btn-default">Login/Create</button>
+		<button  type="submit" id='btnLogin' class="btn btn-default">Login/Create</button>
 	</div>
+	</form>
 </div>
 
 <script type="text/javascript">
@@ -164,6 +166,13 @@ $('div.modal').each(function(o){
 
 var processingLogin = false;
 $('#btnLogin').click(function(){
+	submitLogin(null);
+});
+$('#frm_login').submit(function(evt){
+	submitLogin();
+	return false;
+});
+function submitLogin(){
 	if(processingLogin) return;
 	if(!game._connected) return;
 	processingLogin = true;
@@ -172,7 +181,8 @@ $('#btnLogin').click(function(){
 		pwd: $('#txtPassword').val() 
 	};
 	game.doLogin(params);
-});
+	return false;
+};
 
 var game = CreateGame('game_screen');
 console.log("Game created! ",game);

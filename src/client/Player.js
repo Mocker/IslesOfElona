@@ -48,7 +48,7 @@ Player.prototype.getProfile = function() {
 		bag: this._bag,
 		equip: this._equip,
 		zone: this._zone,
-		world: this._world,
+		//world: this._world,
 		pos: this._pos,
 		created: this._created
 	};

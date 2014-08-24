@@ -9,6 +9,12 @@ var cnf = {
 	WORLD_SIZE_MAX : 140,
 	WORLD_SIZE_MIN : 40,
 
+	BIOME_GRASS 	: 0,
+	BIOME_SNOW 		: 1,
+	BIOME_DESERT 	: 2,
+	BIOME_CITY 		: 3,
+	BIOME_FOREST 	: 4,
+
 	TILES_MAX 		: 4,
 	TILE_TREE 		: 0,
 	TILE_GRASS 		: 1,
@@ -56,7 +62,7 @@ var cnf = {
 	    	i : 0,
 	    	name : 'dirt',
 	    	passable: true,
-	    	tile_i: 42
+	    	tile_i: 38
 	    },
 		{
 			i	: 4,
@@ -64,15 +70,127 @@ var cnf = {
 			passable : false,
 			tile_i: 170
 		},
-		{
+		{ //8
 			i : 5,
 			name : 'road',
 			passable : true,
 			tile_i: 78
+		},
+		{
+			name : 'snow',
+			passable : true,
+			tile_i : 45
+		},
+		{
+			name : 'snow1',
+			passable : true,
+			tile_i : 46
+		},
+		{
+			name : 'snow2',
+			passable : true,
+			tile_i : 47
+		},
+		{
+			name : 'snow_tree',
+			passable : false,
+			tile_i : 49
+		},
+		{ //13
+			name : 'snow_ice_hole',
+			passable : true,
+			tile_i : 55
+		},
+		{ //14
+			name : 'snow_ice',
+			passable : true,
+			tile_i : 60
+		}
+	],
+	blocks : [ //foreground tiles
+		{
+			name :'stairs',
+			passable : true,
+			interactable : true,
+			destructable : false,
+			tile_i : 230
+		},
+		{
+			name :'stairs1',
+			passable : true,
+			interactable : true,
+			destructable : false,
+			tile_i : 232
+		},
+		{
+			name :'trap_arrow',
+			passable : true,
+			interactable : true,
+			destructable : true,
+			tile_i : 234
+		},
+		{
+			name :'door_open',
+			passable : true,
+			interactable : true,
+			destructable : true,
+			tile_i : 236
+		},
+		{ //5
+			name :'campfire',
+			passable : true,
+			interactable : true,
+			destructable : true,
+			tile_i : 238
+		},
+		{ //6
+			name :'rock',
+			passable : false,
+			interactable : false,
+			destructable : true,
+			tile_i : 568
 		}
 	]
 
 };
+
+
+cnf.NPC_ATLAS = {
+	frames : {
+		npcguy : {
+			frame: { x:48, y:0, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		},
+		npcguy2 : {
+			frame: { x:96, y:0, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		},
+		npcguy3 : {
+			frame: { x:144, y:0, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		},
+		npcgirl : {
+			frame: { x:192, y:0, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		},
+		npcgirl2 : {
+			frame: { x:48, y:48, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		}
+	}
+};
+
+cnf.NPC_TYPES = {};
+cnf.NPC_TYPE_LIST = [];
+for(var title in cnf.NPC_ATLAS.frames){
+	cnf.NPC_TYPES[title] = cnf.NPC_ATLAS.frames[title];
+	cnf.NPC_TYPE_LIST.push(title);
+}
 
 cnf.TILES_MAX = cnf.tiles.length;
 
