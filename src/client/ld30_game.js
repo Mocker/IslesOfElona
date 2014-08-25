@@ -24,7 +24,7 @@ CreateGame = function(canvas_id, opts) {
 
 	this.init = function(){
 		this._p = new Phaser.Game(this._canvasW, this._canvasH, Phaser.CANVAS, this._canvasID,{ preload: this.preload, create: this.create, update: this.update, render: this.render} );
-		this._socket = io(cnf.ws_server);
+		this._socket = io(web_cnf.ws_server);
 		this.ui = new UI(this);
 		var self = this;
 		$('#info_server').html('Connecting..');
