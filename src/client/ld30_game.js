@@ -108,7 +108,7 @@ CreateGame = function(canvas_id, opts) {
 				p.curTile = self.map.getTile(p._pos[0], p._pos[1], 'world');
 				p.sprite.x = p.curTile.worldX + (p.sprite.width/2);
 				p.sprite.y = p.curTile.worldY + (p.sprite.height/4);
-				p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle);
+				p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle, self.spriteGroup);
 				p.sprite.bringToTop();
 				p.label.bringToTop();
 				self._player_list[pl.name] = p;
@@ -203,6 +203,9 @@ CreateGame = function(canvas_id, opts) {
 				self._player._kills++;
 				self._world._npcs[data[0]].sprite.destroy();
 				self._world._npcs[data[0]] = null;
+				delete(self._world.occupiedTiles[npcTile.x+','+npcTile.y]);
+				//self.uisprites.trophy_text.destroy();
+				//self.uisprites.trophy_text = self._p.add.text(440,20,''+self._player._kills,{font:'20px Arial', fill:'#ff3333'});
 				self.ui.updateGame(self._player);
 
 			}
@@ -268,14 +271,18 @@ CreateGame = function(canvas_id, opts) {
 
 	this.create = function() {
 		console.log("Game created .. ");
+		self.mapGroup = self._p.add.group(undefined,'map');
+		self.spriteGroup = self._p.add.group(undefined,'sprites');
 		self.map = self._p.add.tilemap();
 		self.map.addTilesetImage('tileset_map', 'tileset_map',48,48);
-		self.layer = self.map.create('Intro', 20, 20, 48, 48);
-		self.layer.resizeWorld();
+		self._worldLayer = self.map.create('world', 60, 60, 48, 48);
+		self._worldLayer.resizeWorld();
+		//self._blockLayer = self.map.createBlankLayer('blocks', 60,60,48,48);
 
 		self.npcguy = self._p.add.sprite(200,200,'npcs','npcguy');
 
 		self.sprite = self._p.add.sprite(10,10,'chr1');
+		//self.spriteGroup.add(self.sprite);
 		self.sprite.animations.add('walk',[0,1,2,3]);
 		self.sprite.animations.add('stand',[0]);
 		self.sprite.animations.play('stand', 0);
@@ -298,9 +305,8 @@ CreateGame = function(canvas_id, opts) {
 		self.cursors.right.onDown.add(self.right);
 		self.cursors.enter.onDown.add(self.space);
 		self.cursors.space.onDown.add(self.space);
-		self.playable = true;
-		self.layer.debug = true;
-		self.map.fill(0,0,0,20,20,self.map.currentLayer);
+		//self.playable = true;
+		self.map.fill(0,0,0,60,60,self.map.currentLayer);
 		/*
 		var spots_max = Math.floor(Math.random()*40+20);
 		for(var i=0;i<spots_max;i++){
@@ -399,7 +405,7 @@ CreateGame = function(canvas_id, opts) {
 			em.start(true,1000,3);
 			var npc = self._world._npcs[oc[1]];
 			if(npc && !npc.lbl) {
-				npc.lbl = self._p.add.text(npc.sprite.x-10,npc.sprite.y-35,"Ouch!",{font:'16px Arial',fill:'#330000'});
+				npc.lbl = self._p.add.text(npc.sprite.x-10,npc.sprite.y-35,"Ouch!",{font:'16px Arial',fill:'#330000'},self.spriteGroup);
 				setTimeout(function(){
 					npc.lbl.destroy();
 					npc.lbl = false;
@@ -420,10 +426,12 @@ CreateGame = function(canvas_id, opts) {
 		showAlert("World data received - creating display");
 		console.log("world data recieived - creating display",newPos);
 		$('#info_zone').html(self._world._name);
-		var world_layer = self.map.getLayer('world');
-		wl = self.map.create('world', self._world._mapData.length, self._world._mapData[0].length, 48, 48);
+		//var world_layer = self.map.getLayer('world');
+		var wl = self.map.create('world', self._world._mapData.length, self._world._mapData[0].length, 48, 48);
 		self._worldlayer = wl;
-		world_layer = self.map.getLayer('world');
+		//wl.data = [];
+		//wl.width = self._world._mapData.
+		//world_layer = self.map.getLayer('world');
 		wl.resizeWorld();
 		
 		var tile = null;
@@ -437,6 +445,7 @@ CreateGame = function(canvas_id, opts) {
 		}
 		console.log("Creating "+self._world._mapObjects.length+" blocks");
 		var block_layer = self.map.createBlankLayer('blocks',self._world._mapData.length, self._world._mapData[0].length,48,48);
+		//var block_layer = self.map.getLayer('blocks');
 		self._blocklayer = block_layer;
 		for(var i=0;i<self._world._mapObjects.length;i++) {
 			//console.log(self._world._mapObjects[i]);
@@ -457,21 +466,23 @@ CreateGame = function(canvas_id, opts) {
 			if(!self._world._npcs[i]) continue; //null spot for killed npc
 			nTile = self.map.getTile(self._world._npcs[i]._x, self._world._npcs[i]._y,'world');
 			self._world._npcs[i].curTile = nTile;
-			self._world._npcs[i].sprite = self._p.add.sprite( nTile.worldX, nTile.worldY,'npcs', self._world._npcs[i]._type  );
+			self._world._npcs[i].sprite = self._p.add.sprite( nTile.worldX, nTile.worldY,'npcs', self._world._npcs[i]._type );
 			self._world._npcs[i].sprite.anchor.setTo(0.5,0.5);
 			self._world._npcs[i].sprite.y += self._world._npcs[i].sprite.height/4;
 			self._world._npcs[i].sprite.x += self._world._npcs[i].sprite.width/2;
+			self._world.occupiedTiles[nTile.x+','+nTile.y]=['npc',i];
 		}
 		//build portal sprites
 		for(i=0;i<self._world._portals.length;i++) {
 			nTile = self.map.getTile(self._world._portals[i]._x, self._world._portals[i]._y,'world');
 			self._world._portals[i].curTile = nTile;
-			self._world._portals[i].sprite = self._p.add.sprite( nTile.worldX, nTile.worldY,'npcs'  );
+			self._world._portals[i].sprite = self._p.add.sprite( nTile.worldX, nTile.worldY,'npcs' );
 			self._world._portals[i].sprite.animations.add('bzz',['portal','portal2', 'portal3','portal2'],(Math.random()*8+2), true);
 			self._world._portals[i].sprite.animations.play('bzz');
 			self._world._portals[i].sprite.anchor.setTo(0.5,0.5);
 			//self._world._portals[i].sprite.y += self._world._portals[i].sprite.height/4;
 			self._world._portals[i].sprite.x += self._world._portals[i].sprite.width/2;
+			self._world.occupiedTiles[nTile.x+','+nTile.y] = ['portal',i];
 		}
 
 		var centerX = Math.floor(self._world._width/2); //TODO:: player pos sent from server
@@ -479,7 +490,7 @@ CreateGame = function(canvas_id, opts) {
 		else self.movePlayerTo( centerX, Math.floor(self._world._height/2) );
 		self.playable = true;
 		self._p.camera.follow(self.sprite);
-		self.sprite.bringToTop();
+		//self.sprite.bringToTop();
 		hideSpinner();
 		$('#login_modal').modal('hide');
 		console.log("loadWorld Finished");
@@ -490,8 +501,12 @@ CreateGame = function(canvas_id, opts) {
 				self.sprite.x = self.curTile.worldX + (self.sprite.width/2);
 				self.sprite.y = self.curTile.worldY + (self.sprite.height/4);
 			}
+			self.curTile = self.map.getTile(self._player._pos[0],self._player._pos[1],'world');
 			self.movePlayerTo(self._player._pos[0], self._player._pos[1]);
 			self.sprite.bringToTop();
+			for(var c=0;c<self.spriteGroup.children.length;c++){
+				self.spriteGroup.bringToTop(self.spriteGroup.children[c]);
+			}
 			self.ui.updateGame(self._player);
 			//self.npcguy.bringToTop();
 		},100);
@@ -504,7 +519,7 @@ CreateGame = function(canvas_id, opts) {
 		console.log(centerTile);
 		if( centerTile.properties.passable ===false ) return false;
 
-		if( self._world.occupiedTiles[tileX+','+tileY]){
+		if( !self.curTile || ( self._world.occupiedTiles[tileX+','+tileY] && self._world.occupiedTiles[tileX+','+tileY][0]!='pc') ){
 			var oc = self._world.occupiedTiles[tileX+','+tileY];
 			console.log("Tile occupied", oc);
 			if(oc[0]=='npc'){ //silly blood effects
@@ -535,7 +550,7 @@ CreateGame = function(canvas_id, opts) {
 			if(pc.sprite) {
 				pc.sprite.x = centerTile.worldX + (pc.sprite.width/2);
 				pc.sprite.y = centerTile.worldY + (pc.sprite.height/4);
-				pc.sprite.bringToTop();
+				//pc.sprite.bringToTop();
 			}
 			if(pc.label){
 				pc.label.x = centerTile.worldX + (pc.sprite.width/2);
@@ -547,7 +562,7 @@ CreateGame = function(canvas_id, opts) {
 		self.curTile = centerTile;
 		self.sprite.x = centerTile.worldX + (self.sprite.width/2);
 		self.sprite.y = centerTile.worldY + (self.sprite.height/4);
-		self.sprite.bringToTop();
+		//self.sprite.bringToTop();
 
 		self._socket.emit('move',[tileX,tileY]);
 		return true;
@@ -602,7 +617,7 @@ CreateGame = function(canvas_id, opts) {
 			p.curTile = self.map.getTile(p._pos[0], p._pos[1], 'world');
 			p.sprite.x = p.curTile.worldX + (p.sprite.width/2);
 			p.sprite.y = p.curTile.worldY + (p.sprite.height/4);
-			p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle);
+			p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle, self.spriteGroup);
 			p.sprite.bringToTop();
 			p.label.bringToTop();
 			self._player_list[plist[i].name] = p;

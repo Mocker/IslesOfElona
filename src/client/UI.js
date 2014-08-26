@@ -17,7 +17,8 @@ function UI(game) {
 }
 
 UI.prototype.addGameUI = function(){
-	game.uigroup = game._p.add.group();
+	game.uigroup = game._p.add.group(undefined, 'uigroup');
+	game.uigroup.fixedToCamera = true;
 	game.uisprites = {};
 	game.uisprites.heart = game._p.add.sprite(20, 10, 'items','heartgem');
 	game.uisprites.heart_text = game._p.add.text( 80, 20, '100', {font:'20px Arial', fill:'#ff3333'});
@@ -26,18 +27,27 @@ UI.prototype.addGameUI = function(){
 	for(var i in game.uisprites){
 		game.uisprites[i].fixedToCamera = true;
 		if(game.uisprites[i].bringToTop)  game.uisprites[i].bringToTop();
+		else {
+			game.uisprites[i].parent.bringToTop(game.uisprites[i]);
+		}
 	}
+	//game.uigroup.bringToTop();
 };
 
 UI.prototype.updateGame  = function(player){
 	game.uisprites.heart_text.destroy();
 	game.uisprites.trophy_text.destroy();
-	game.uisprites.heart_text = game._p.add.text( 80, 20, 'health: '+player._health, {font:'20px Arial', fill:'#ff3333'});
-	game.uisprites.trophy_text = game._p.add.text(450,20,'kills: '+player._kills,{font:'20px Arial', fill:'#ff3333'});
+	//game.uisprites.heart_text.text = player._health;
+	//game.uisprites.trophy_text.text = player._kills;
+	game.uisprites.heart_text = game._p.add.text( 60, 20, ''+player._health, {font:'20px Arial', fill:'#ff3333'});
+	game.uisprites.heart_text.fixedToCamera=true;
+	game.uisprites.trophy_text = game._p.add.text(440,20,''+player._kills,{font:'20px Arial', fill:'#ff3333'});
+	game.uisprites.trophy_text.fixedToCamera=true;
 	for(var i in game.uisprites){
-		game.uisprites[i].fixedToCamera = true;
+		//game.uisprites[i].fixedToCamera = true;
 		if(game.uisprites[i].bringToTop) game.uisprites[i].bringToTop();
 	}
+	//game.uigroup.bringToTop();
 };
 
 UI.prototype.liClicked = function(li) {
