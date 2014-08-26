@@ -45,8 +45,8 @@ db.once('open', function callback(){
   MODELS = new Models();
 
   //TODO:: remove when player/map gen is complete. Remove all players/maps on start to force new gen
-  MODELS.Player.find({}).remove().exec();
-  MODELS.World.find({}).remove().exec();
+  //MODELS.Player.find({}).remove().exec();
+  //MODELS.World.find({}).remove().exec();
 
 });
 
@@ -444,6 +444,10 @@ function Warp(socket, params){
 //Create list of players in world to send back to one who just joined
 function getWorldPlayers ( w ) {
   var plist = [];
+  if(!w){
+    console.log("getWorldPlayers called without world!");
+    return plist;
+  }
   for(var p in w._player_list ) {
     if(!players[p]){
       console.log("world player list has invalid player: "+p);
