@@ -454,6 +454,7 @@ CreateGame = function(canvas_id, opts) {
 		//TODO:: load npcs /objects
 		var nTile = null;
 		for(i=0;i<self._world._npcs.length;i++) {
+			if(!self._world._npcs[i]) continue; //null spot for killed npc
 			nTile = self.map.getTile(self._world._npcs[i]._x, self._world._npcs[i]._y,'world');
 			self._world._npcs[i].curTile = nTile;
 			self._world._npcs[i].sprite = self._p.add.sprite( nTile.worldX, nTile.worldY,'npcs', self._world._npcs[i]._type  );

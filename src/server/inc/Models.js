@@ -193,6 +193,10 @@ Models.prototype.loadPlayer = function( player, pModel, cb ) {
 Models.prototype.saveWorld = function( world, cb ) {
 	world._model.npcs = [];
 	for (var i=0;i<world._npcs.length;i++ ) {
+		if(!world._npcs[i]){
+			world._model.npcs.push({json:null,type:null,x:null,y:null,name:null} );
+			continue;
+		}
 		world._model.npcs.push({ 
 			json 	: JSON.stringify(world._npcs[i]),
 			type 	: world._npcs[i]._type,
@@ -256,6 +260,10 @@ Models.prototype.loadWorld = function( player, wModel, world, cb) {
 	world._is_primary = wModel.is_primary;
 	world._npcs = []; 
 	for(var i =0;i<wModel.npcs.length;i++) {
+		if(!wModel.npcs[i].json) {
+			world._npcs.push(null);
+			continue;
+		}
 		var npc = JSON.parse(wModel.npcs[i].json);
 		world._npcs.push(npc);
 	}
