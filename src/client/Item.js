@@ -7,6 +7,9 @@ function Item(type,x,y) {
 	this._type = type;
 	this._x = x;
 	this._y = y;
+	this._weight = 1;
+	this._slot = 0;
+	this._baseValue = 1;
 	this._name = "Test "+type+" Object";
 	this._sprite = null;
 	this.i = 0;

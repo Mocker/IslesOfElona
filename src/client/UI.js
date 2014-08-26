@@ -9,9 +9,36 @@ function UI(game) {
 	this.game = game;
 
 	this.menu = false;
-
 	var t = this;
+
+	
+
+
 }
+
+UI.prototype.addGameUI = function(){
+	game.uigroup = game._p.add.group();
+	game.uisprites = {};
+	game.uisprites.heart = game._p.add.sprite(20, 10, 'items','heartgem');
+	game.uisprites.heart_text = game._p.add.text( 80, 20, '100', {font:'20px Arial', fill:'#ff3333'});
+	game.uisprites.trophy = game._p.add.sprite(400,10,'items','antlertrophy');
+	game.uisprites.trophy_text = game._p.add.text(450,20,'0',{font:'20px Arial', fill:'#ff3333'});
+	for(var i in game.uisprites){
+		game.uisprites[i].fixedToCamera = true;
+		if(game.uisprites[i].bringToTop)  game.uisprites[i].bringToTop();
+	}
+};
+
+UI.prototype.updateGame  = function(player){
+	game.uisprites.heart_text.text = player._health;
+	game.uisprites.trophy_text.text = player._kills;
+	game.uisprites.heart_text = game._p.add.text( 80, 20, 'health: '+player._health, {font:'20px Arial', fill:'#ff3333'});
+	game.uisprites.trophy_text = game._p.add.text(450,20,'kills: '+player._kills,{font:'20px Arial', fill:'#ff3333'});
+	for(var i in game.uisprites){
+		game.uisprites[i].fixedToCamera = true;
+		if(game.uisprites[i].bringToTop) game.uisprites[i].bringToTop();
+	}
+};
 
 UI.prototype.liClicked = function(li) {
 	console.log("List clicked",li);

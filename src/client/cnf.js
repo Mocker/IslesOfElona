@@ -14,6 +14,7 @@ var cnf = {
 	BIOME_DESERT 	: 2,
 	BIOME_CITY 		: 3,
 	BIOME_FOREST 	: 4,
+	BIOME_LAVA		: 5,
 	
 
 	TILES_MAX 		: 4,
@@ -35,7 +36,7 @@ var cnf = {
 	    	passable: true,
 	    	tile_i: 8
 	    },
-	    {
+	    { //2
 	    	i : 0,
 	    	name : 'tree2',
 	    	passable: true,
@@ -53,7 +54,7 @@ var cnf = {
 			passable : true,
 			tile_i : 1
 		},
-		{
+		{ //5
 			i : 3,
 			name : 'grass2',
 			passable : true,
@@ -106,6 +107,35 @@ var cnf = {
 			name : 'snow_ice',
 			passable : true,
 			tile_i : 60
+		},
+		{
+			name : 'water_light',
+			passable : false,
+			tile_i : 166
+		},
+		{   name : 'shore_left1',
+			passable : false,
+			tile_i : 309
+		},
+		{ //17
+			name : 'sand',
+			passable : true,
+			tile_i : 19
+		},
+		{ //18
+			name : 'lava',
+			passable : false,
+			tile_i : 562
+		},
+		{
+			name : 'lava2',
+			passable : false,
+			tile_i : 563
+		},
+		{ //20
+			name : 'slate',
+			passable : true,
+			tile_i : 560
 		}
 	],
 	blocks : [ //foreground tiles
@@ -123,7 +153,7 @@ var cnf = {
 			destructable : false,
 			tile_i : 232
 		},
-		{
+		{ //2
 			name :'trap_arrow',
 			passable : true,
 			interactable : true,
@@ -137,23 +167,59 @@ var cnf = {
 			destructable : true,
 			tile_i : 236
 		},
-		{ //5
+		{ //4
 			name :'campfire',
 			passable : true,
 			interactable : true,
 			destructable : true,
 			tile_i : 238
 		},
-		{ //6
+		{ //5
 			name :'rock',
 			passable : false,
 			interactable : false,
 			destructable : true,
 			tile_i : 568
+		},
+		{ //6
+			name :'plant_tiny',
+			passable : true,
+			interactable : true,
+			destructable : true,
+			tile_i : 248
+		},
+		{ //7
+			name :'plant_med',
+			passable : true,
+			interactable : true,
+			destructable : true,
+			tile_i : 249
+		},
+		{ //8
+			name :'plant_large',
+			passable : true,
+			interactable : true,
+			destructable : true,
+			tile_i : 250
+		},
+		{ //9
+			name :'snow_log',
+			passable : true,
+			interactable : true,
+			destructable : true,
+			tile_i : 668
+		},
+		{ //10
+			name :'snow_rock',
+			passable : false,
+			interactable : true,
+			destructable : true,
+			tile_i : 670
 		}
 	]
 
 };
+
 
 
 cnf.NPC_ATLAS = {
@@ -206,15 +272,45 @@ cnf.NPC_ATLAS = {
 			rotated: false,
 			trimmed: false,
 			not_npc: true
+		},
+		ghoul : {
+			frame: {x:288,y:240, w:48, h:48},
+			rotated : false,
+			trimmed: false,
+			hostile : true,
+			base_health : 50,
+			speed : 2,
+			chase_distance : 15
+		},
+		blobbit : {
+			frame : {x:144, y:240, w:48, h:48},
+			rotated: false,
+			trimmed: false,
+			hostile : true,
+			base_health : 10,
+			speed : 4,
+			chase_distance : 10
+		},
+		eye : {
+			frame: {x:430, y:288, w:48, h:48 },
+			rotated: false,
+			trimmed: false,
+			hostile: true,
+			flying : true,
+			speed : 4,
+			base_health : 15,
+			chase_distance : 25
 		}
+
 	}
 };
 
 cnf.BIOMES  = [ //list of possible biomes. repeated means more likely to get picked at random
-		cnf.BIOME_GRASS, cnf.BIOME_GRASS,cnf.BIOME_GRASS,cnf.BIOME_GRASS,
+		cnf.BIOME_GRASS, cnf.BIOME_GRASS,cnf.BIOME_GRASS,
 		cnf.BIOME_SNOW,  cnf.BIOME_SNOW,
 		cnf.BIOME_FOREST, cnf.BIOME_FOREST,
-		cnf.BIOME_DESERT
+		cnf.BIOME_DESERT,
+		cnf.BIOME_LAVA
 	];
 
 cnf.NPC_TYPES = {};
@@ -245,6 +341,21 @@ cnf.ITEM_ATLAS = {
 		},
 		purplesplash : {
 			frame: { x:192, y:0, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		},
+		dagger : {
+			frame: {x:144, y:624, w:40, h:40 },
+			rotated: false,
+			trimmed: false
+		},
+		heartgem : {
+			frame: {x:98, y:48, w:48, h:48 },
+			rotated: false,
+			trimmed: false
+		},
+		antlertrophy: {
+			frame: {x:768, y:768, w:48, h:48},
 			rotated: false,
 			trimmed: false
 		}

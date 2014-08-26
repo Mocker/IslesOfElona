@@ -14,6 +14,7 @@ CreateGame = function(canvas_id, opts) {
 	this._primary_world = false;
 	this._player_list = {}; //active players on the same map
 	this._local = false;
+	this._uisprites = {};
 
 	if(!this._canvasE) {
 		alert("Missing canvas!"); return false;
@@ -174,6 +175,39 @@ CreateGame = function(canvas_id, opts) {
 			self.received_msg('System',user+' has logged in');
 		});
 
+		//npc action
+		this._socket.on('npc', function(data){
+			
+			if( !self._world._npcs[ data[0] ] ) return;
+
+			if(data.length>1 && data[1]=='move') {
+				//console.log("npc move!",data);
+				var curTile = self.map.getTile(data[2],data[3],'world');
+				//self._world._npcs[data[0]].tween = self._p.add.tween(self._world._npcs[data[0]] ).to({x: curTile.worldX+24, y: curTile.worldX+24}, 1000, Phaser.Easing.Quadratic);
+				var oc = self._world.occupiedTiles[ self._world._npcs[data[0]]._x+','+self._world._npcs[data[0]]._y];
+				delete(self._world.occupiedTiles[ self._world._npcs[data[0]]._x+','+self._world._npcs[data[0]]._y]);
+				self._world._npcs[data[0]].sprite.x = curTile.worldX+10;
+				self._world._npcs[data[0]].sprite.y = curTile.worldY+10;
+				self._world._npcs[data[0]]._x = data[2];
+				self._world._npcs[data[0]]._y = data[3];
+				self._world._npcs[data[0]].curTile = curTile;
+				self._world.occupiedTiles[ self._world._npcs[data[0]]._x+','+self._world._npcs[data[0]]._y] = oc;
+			} else if(data.length>1 && data[1]=='kill') {
+				//killed npc!
+				console.log("npc killed!",data);
+				var npcTile = self._world._npcs[data[0]].curTile;
+				var em = self._p.add.emitter(npcTile.worldX+npcTile.width/2, npcTile.worldY+npcTile.height/2, 30);
+				em.makeParticles('npcs',['bloodspurt'],50);
+				em.maxParticleSpeed = 22.5;
+				em.start(true,1000);
+				self._player._kills++;
+				self._world._npcs[data[0]].sprite.destroy();
+				self._world._npcs[data[0]] = null;
+				self.ui.updateGame(self._player);
+
+			}
+		});
+
 		this._socket.on('ping',function(){
 			//console.log("ping!");
 			self._socket.emit('ping');
@@ -192,6 +226,17 @@ CreateGame = function(canvas_id, opts) {
 				//todo:: change zones for map
 			}
 		});
+		this._socket.on('player update',function(data){
+			console.log("player update",data);
+			for(var k in data){
+				self._player[k] = data[k];
+			}
+			//UPDATE PLAYER DISPLAY
+		});
+	};
+
+	this.updatePlayerUI = function() {
+		//update player health, stats, kills display with current
 	};
 
 	this.received_msg = function(user, msg) {
@@ -216,7 +261,7 @@ CreateGame = function(canvas_id, opts) {
 		self._p.load.image('tileset_map','assets/elona/map1tp.png');
 		self._p.load.spritesheet('chr1', 'assets/elona/char1.png',32,48);
 		self._p.load.atlasJSONHash('npcs', 'assets/elona/npcs.png', null, cnf.NPC_ATLAS);
-		self._p.load.atlasJSONHash('npcs', 'assets/elona/items.png', null, cnf.ITEM_ATLAS);
+		self._p.load.atlasJSONHash('items', 'assets/elona/items.png', null, cnf.ITEM_ATLAS);
 		//self._p.load.tilemap('blank_map0','json/blank_map0.json', null, Phaser.Tilemap.TILED_JSON);
 	};
 
@@ -279,6 +324,8 @@ CreateGame = function(canvas_id, opts) {
 				self.loadWorld( self._player._pos );
 			});
 		}
+
+		self.ui.addGameUI();
 		
 		
 		
@@ -293,37 +340,74 @@ CreateGame = function(canvas_id, opts) {
 	this.up = function() {
 		if(self.menuOpen) { self.ui.keyPress('up'); return;}
 		if(!self.playable) return;
+		self.sprite.animations.play('walk_up',3);
+		self._player._facing = "up";
 		var newTile = self.map.getTileAbove(0, self.curTile.x, self.curTile.y );
 		var isMoved = false;
 		if(newTile) isMoved = self.movePlayerTo(newTile.x, newTile.y);
-		if(isMoved) self.sprite.animations.play('walk_up',3);
+		
 	};
 	this.down = function() {
 		if(self.menuOpen) { self.ui.keyPress('down'); return;}
 		if(!self.playable) return;
+		self.sprite.animations.play('walk',3);
+		self._player._facing = "down";
 		var newTile = self.map.getTileBelow(0, self.curTile.x, self.curTile.y );
 		var isMoved = false;
 		if(newTile) isMoved = self.movePlayerTo(newTile.x, newTile.y);
-		if(isMoved) self.sprite.animations.play('walk',3);
+		
 	};
 	this.left = function() {
 		if(self.menuOpen) { self.ui.keyPress('left'); return;}
 		if(!self.playable) return;
+		self.sprite.animations.play('walk_left',3);
+		self._player._facing = "left";
 		var newTile = self.map.getTileLeft(0, self.curTile.x, self.curTile.y );
 		var isMoved = false;
 		if(newTile) isMoved = self.movePlayerTo(newTile.x, newTile.y);
-		if(isMoved) self.sprite.animations.play('walk_left',3);
 	};
 	this.right = function() {
 		if(self.menuOpen) { self.ui.keyPress('right'); return;}
 		if(!self.playable) return;
+		self.sprite.animations.play('walk_right',3);
+		self._player._facing = "right";
 		var newTile = self.map.getTileRight(0, self.curTile.x, self.curTile.y );
 		var isMoved = false;
 		if(newTile) isMoved = self.movePlayerTo(newTile.x, newTile.y);
-		if(isMoved) self.sprite.animations.play('walk_right',3);
 	};
 	this.space = function(){
 		if(self.menuOpen){ self.ui.keyPress('space'); return; }
+		if(!self.playable) return;
+		//Attack the darkness!
+		var attackTile = false;
+		if(self._player._facing=='up'){
+			attackTile = self.getTiles(self._player._pos[0], self._player._pos[1]-1);
+		} else if(self._player._facing=='down') {
+			attackTile = self.getTiles(self._player._pos[0], self._player._pos[1]+1);
+		} else if( self._player._facing=='left') {
+			attackTile = self.getTiles(self._player._pos[0]-1, self._player._pos[1]);
+		} else if( self._player._facing=='right') {
+			attackTile = self.getTiles(self._player._pos[0]+1, self._player._pos[1]);
+		}
+		if(attackTile===false || attackTile.length < 2) return; //invalid tile or nothing there worth attacking
+		//calculate attack and send to server!
+		var oc = attackTile[1];
+		if(attackTile[1][0]=='npc') {
+			var em = self._p.add.emitter(attackTile[0].worldX+attackTile[0].width/2, attackTile[0].worldY+attackTile[0].height/2, 30);
+			em.makeParticles('npcs',['bloodspurt']);
+			em.maxParticleSpeed = 12.5;
+			em.start(true,1000,3);
+			var npc = self._world._npcs[oc[1]];
+			if(npc && !npc.lbl) {
+				npc.lbl = self._p.add.text(npc.sprite.x-10,npc.sprite.y-35,"Ouch!",{font:'16px Arial',fill:'#330000'});
+				setTimeout(function(){
+					npc.lbl.destroy();
+					npc.lbl = false;
+				},1000);
+			}
+			npc._health -= self._player._attack;
+			self._socket.emit('attack',oc[1]);
+		}
 	};
 
 	this.render = function() {
@@ -404,9 +488,10 @@ CreateGame = function(canvas_id, opts) {
 				self.curTile = self.map.getTile(10,10,'world');
 				self.sprite.x = self.curTile.worldX + (self.sprite.width/2);
 				self.sprite.y = self.curTile.worldY + (self.sprite.height/4);
-
 			}
+			self.movePlayerTo(self._player._pos[0], self._player._pos[1]);
 			self.sprite.bringToTop();
+			self.ui.updateGame(self._player);
 			//self.npcguy.bringToTop();
 		},100);
 	};
@@ -422,18 +507,7 @@ CreateGame = function(canvas_id, opts) {
 			var oc = self._world.occupiedTiles[tileX+','+tileY];
 			console.log("Tile occupied", oc);
 			if(oc[0]=='npc'){ //silly blood effects
-				var em = self._p.add.emitter(centerTile.worldX+centerTile.width/2, centerTile.worldY+centerTile.height/2, 30);
-				em.makeParticles('npcs',['bloodspurt']);
-				em.maxParticleSpeed = 8.5;
-				em.start(true,1500,3);
-				var npc = self._world._npcs[oc[1]];
-				if(npc && !npc.lbl) {
-					npc.lbl = self._p.add.text(npc.sprite.x-10,npc.sprite.y-35,"Oof!",{font:'14px Arial',fill:'#330000'});
-					setTimeout(function(){
-						npc.lbl.destroy();
-						npc.lbl = false;
-					},2500);
-				}
+				
 			} else if(oc[0]=='portal') {
 				var portal = self._world._portals[oc[1]];
 				var m = {
@@ -490,9 +564,9 @@ CreateGame = function(canvas_id, opts) {
 		var params = {portal_i:portal_i};
 		if( self._world._portals[portal_i]._properties.is_explored ) {
 			params.id_world = self._world._portals[portal_i]._properties.id_world;
-			params.to_portal = self._world._portals[portal_i]._properties.remote_id;
+			params.portal_to = self._world._portals[portal_i]._properties.remote_id;
 		}
-		self._socket.emit('warp',{portal_i:portal_i});
+		self._socket.emit('warp',params);
 	};
 
 
@@ -534,6 +608,15 @@ CreateGame = function(canvas_id, opts) {
 			console.log("added player",p);
 		}
 		console.log("loaded players",self._player_list.length);
+	};
+
+	this.getTiles = function(x,y) {
+		if(x<0||x>self._world._width) return false;
+		if(y<0||y>self._world._height) return false;
+		var tiles = [];
+		tiles[0] = self.map.getTile(x,y,'world');
+		if( self._world.occupiedTiles[x+','+y] ) tiles[1] = self._world.occupiedTiles[x+','+y];
+		return tiles;
 	};
 
 	this.clearPlayerSprites = function() {

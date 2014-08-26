@@ -25,11 +25,12 @@ function World( width, height ) {
 	this._mapObjects = []; //tile objects that go above terrain
 	this._items = []; //interactable items
 	this._current_players = 1;
-	this._player_list = {}; //server keep sockets of players connected to this world for messaging
+	this._player_list = {}; //server keep list of player names
 	this._map = null;
 	this._spawnPoint = [0,0];
 	this._biome = cnf.BIOME_GRASS;
 	this._portals = [];
+	this.linked_portal = false;
 	if(typeof(module) ==="undefined") this._map = new Map(); //only trigger on frontend
 
 }
@@ -56,13 +57,22 @@ World.prototype.generate = function(world_name, player, opts, cb){
 	var water_tiles = [7];
 	var road_tiles = [8];
 	var dirt_tiles = [6];
+	var draw_beach = false;
+
+	var flavor_blocks = [2,4,4,5,5,6,6,6,6,7,7,7,7,8,8,8,8];
+
 	if(this._biome==cnf.BIOME_SNOW){
 		fill_tiles = [9,10,11];
 		tree_tiles = [12];
+		flavor_blocks = [2,4,6,6,9,9,9,10,10,10];
 	} else if(this._biome==cnf.BIOME_DESERT) {
-		
+		draw_beach = (Math.random()<0.1);
 	} else if(this._biome==cnf.BIOME_CITY) {
 
+	} else if(this._biome==cnf.BIOME_LAVA) {
+		fill_tiles = [8,8,8,20,20,20,20,18,18,19,19 ];
+	} else {
+		draw_beach = (Math.random() < 0.4 );
 	}
 
 	this.occupiedTiles = {}; //string keys for which tiles are blocked or occupied
@@ -71,6 +81,23 @@ World.prototype.generate = function(world_name, player, opts, cb){
 		this._mapData[x] = [];
 		for(var y=0; y<this._height;y++) {
 			var tile_type = 0;
+
+			if(draw_beach && x <4 ){
+				tile_type = 15;
+				this._mapData[x][y] = tile_type;
+				this.occupiedTiles[x+','+y] = ['tile',tile_type];
+				continue;
+			} else if(draw_beach && x==4) {
+				tile_type = 16;
+				this._mapData[x][y] = tile_type;
+				this.occupiedTiles[x+','+y] = ['tile',tile_type];
+				continue;
+			} else if(draw_beach && x==5) {
+				tile_type = 17;
+				this._mapData[x][y] = tile_type;
+				continue;
+			}
+
 			var rand = (Simplex.noise( (x/this._width)*simplex_jitter/2 , (y/this._height)*simplex_jitter/2 )+1)/2;
 			//determine for any special tiles based on biome
 			var use_special = 0;
@@ -101,6 +128,7 @@ World.prototype.generate = function(world_name, player, opts, cb){
 					} else if(rand >= 0.6 && rand <= 0.67 ) {
 						tile_type = 14;
 						use_special = 1;
+					} else if(rand < 0.2) {
 					}
 					break;
 				case cnf.BIOME_FOREST :
@@ -125,15 +153,9 @@ World.prototype.generate = function(world_name, player, opts, cb){
 				rand = Math.random();
 				if(rand > 0.92 ) {
 					//rand = (Simplex.noise( (x/this._width)*simplex_jitter , (y/this._height)*simplex_jitter )+1)/2;
-					rand = Math.random();
-					var block = 0;
-					if(rand > 0.8 ) {
-						block = 2;
-					} else if(rand > 0.6){
-						block = 4;
-					} else  {
-						block = 5;
-					}
+					rand = Math.floor( Math.random()*flavor_blocks.length);
+					
+					block = flavor_blocks[ rand ];
 					this._mapObjects.push({x:x,y:y, i:block,tile_i: cnf.blocks[block].tile_i });
 					if(!cnf.blocks[block].passable) this.occupiedTiles[x+','+y] = ['block',this._mapObjects.length-1];
 				}
@@ -163,11 +185,14 @@ World.prototype.generate = function(world_name, player, opts, cb){
 		}
 		if(!foundTile) continue;
 		var npc = new NPC( cnf.NPC_TYPE_LIST[nType], foundTile[0], foundTile[1] );
+		npc._meta = cnf.NPC_ATLAS.frames[ cnf.NPC_TYPE_LIST[nType] ];
+		if(npc._meta.base_health) npc._health = npc._meta.base_health;
+		
 		this._npcs.push(npc);
 		this.occupiedTiles[foundTile[0]+','+foundTile[1]] = ['npc', this._npcs.length-1];
 	}
 
-	var numPortals = Math.random()*25+12;
+	var numPortals = Math.random()*15+3;
 	for(i=0;i<numPortals;i++){
 		foundTile = false;
 		attempts = 0;
@@ -190,6 +215,7 @@ World.prototype.generate = function(world_name, player, opts, cb){
 			portal._properties.remote_id = opts.link_portal.id_portal;
 			opts.link_portal.linked = true;
 			this.linked_portal = this._portals.length;
+			console.log("Created link portal: "+this._portals.length+" to world "+opts.link_portal.id_world +" portal["+opts.link_portal.id_portal+"]");
 		} else {
 			portal._name = 'Mysterious Portal';
 			portal._properties.is_explored = false;	
@@ -197,8 +223,10 @@ World.prototype.generate = function(world_name, player, opts, cb){
 		portal.i = this._portals.length;
 		this._portals.push(portal);
 		this.occupiedTiles[foundTile[0]+','+foundTile[1]] = ['portal', this._portals.length-1];
-	
 	}
+
+	//items scattered on ground
+	var numItems = Math.random()*15+10;
 
 
 

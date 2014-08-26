@@ -2,6 +2,8 @@
 *	Player.JS
 *   representation of a single player
 ****/
+if(typeof(module)!=="undefined") var Item = require('./Item');
+
 var playerCount = 0;
 
 
@@ -10,6 +12,11 @@ function Player( username, password) {
 	this._username = username;
 	this._password = password;
 	this._created = new Date().getTime();
+	this._attack = 20;
+	this._attack_range = 1;
+	this._facing = 'down';
+	this._homeworld = false;
+	this._home_pos = false;
 	this._socket = false;
 	this._zone = 'login';
 	this._world = 'login';
@@ -17,8 +24,9 @@ function Player( username, password) {
 	this._health = 100;
 	this._vel = [0,0];
 	this._anim = "standing";
+	this._kills = 0;
 	this._bag = [];
-	this._equip = {};
+	this._equip = [];
 	this._model = false; //use on server to store db reference
 
 	playerCount++;
@@ -48,6 +56,11 @@ Player.prototype.getProfile = function() {
 		bag: this._bag,
 		equip: this._equip,
 		zone: this._zone,
+		homeworld: this._homeworld,
+		attack : this._attack,
+		attack_range : this._attack_range,
+		facing : this._facing,
+		kills: this._kills,
 		//world: this._world,
 		pos: this._pos,
 		created: this._created
