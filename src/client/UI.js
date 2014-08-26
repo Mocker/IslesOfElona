@@ -30,8 +30,8 @@ UI.prototype.addGameUI = function(){
 };
 
 UI.prototype.updateGame  = function(player){
-	game.uisprites.heart_text.text = player._health;
-	game.uisprites.trophy_text.text = player._kills;
+	game.uisprites.heart_text.destroy();
+	game.uisprites.trophy_text.destroy();
 	game.uisprites.heart_text = game._p.add.text( 80, 20, 'health: '+player._health, {font:'20px Arial', fill:'#ff3333'});
 	game.uisprites.trophy_text = game._p.add.text(450,20,'kills: '+player._kills,{font:'20px Arial', fill:'#ff3333'});
 	for(var i in game.uisprites){
