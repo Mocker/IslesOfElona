@@ -127,7 +127,7 @@ io.on('connection', function(socket){
   	}
 
   	console.log('received login for ',params.user);
-  	if( players[params.user] ) {
+  	if( players[params.user] && players[params.user]._world && worlds[players[params.user]._world] ) {
       //player already exists - resume
   		if( !players[params.user].login( params.pwd ) ) {
   			socket.emit('login',{status:false,err:'invalid password'});
@@ -146,12 +146,12 @@ io.on('connection', function(socket){
         return;
       }
 
-      var p_list = worlds[socket.player._world]._player_list; //hide player list since it is sockets and client can't read those
+      //var p_list = worlds[socket.player._world]._player_list; //hide player list since it is sockets and client can't read those
       //worlds[socket.player._world]._player_list = {};
       var wString = JSON.stringify( worlds[socket.player._world] );
       console.log("Sending world string.. "+wString.length);
       socket.emit('world', wString, socket.player._pos); 
-      worlds[socket.player._world]._player_list = p_list;
+      //worlds[socket.player._world]._player_list = p_list;
       p_list = getWorldPlayers( worlds[socket.player._world] );
       socket.emit('pc list', p_list);
       socket.join(socket.player._world);
