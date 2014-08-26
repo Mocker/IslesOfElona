@@ -167,6 +167,7 @@ Models.prototype.loadPlayer = function( player, pModel, cb ) {
 	player._kills = pModel.kills;
 	player._equip = [];
 	var i=0; var item=null;
+	if(!pModel.bag) pModel.bag = [];
 	for( i=0;i<pModel.bag.length;i++){
 		item = new Item(pModel.bag[i].type, pModel.bag[i].x, pModel.bag[y]);
 		item._name = pModel.bag[i].name;
@@ -176,6 +177,7 @@ Models.prototype.loadPlayer = function( player, pModel, cb ) {
 		item._baseValue = pModel.bag[i].baseValue;
 		player._bag.push(item);
 	}
+	if(!pModel.equip) pModel.equip = [];
 	for( i=0;i<pModel.equip.length;i++){
 		item = new Item(pModel.equip[i].type, pModel.equip[i].x, pModel.equip[y]);
 		item._name = pModel.equip[i].name;
