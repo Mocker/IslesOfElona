@@ -27,6 +27,8 @@ var MODELS = false;
 var active_worlds = {};
 var worlds = {};
 var players = {};
+var last_updated = 10000;
+var update_tick = 1000;
 
 var world_ticker = setInterval(function(){
   for(var id_world in worlds ) {
@@ -37,7 +39,14 @@ var world_ticker = setInterval(function(){
     }
     update_world( worlds[id_world]);
   }
-},1000);
+  if(last_updated <= 0 ){ //save players current info to db
+    for( var p in players ) {
+      MODELS.savePlayer( players[p] );
+    }
+  }
+  last_updated = (last_updated <= 0 )? 10000 : (last_updated - update_tick);
+
+},update_tick);
 
 db.on('error', console.error.bind(console,'db connection error'));
 db.once('open', function callback(){
@@ -84,18 +93,22 @@ io.on('connection', function(socket){
   //client sends player move
   socket.on('move', function(pos){
     //TODO:: verify moves are ok
-    if(pos[0]==socket.player._pos[0] && pos[1]==socket.player._pos[1]) return;
+    if(socket.player._pos && pos[0]==socket.player._pos[0] && pos[1]==socket.player._pos[1]) return;
 
     //set facing
-    if(pos[0] < socket.player._pos[0]) socket.player._facing = 'up';
-    else if(pos[0] > socket.player._pos[0] ) socket.player._facing = 'down';
-    else if(pos[1] > socket.player._pos[1] ) socket.player._facing = 'right';
+    if(socket.player._pos && pos[0] < socket.player._pos[0]) socket.player._facing = 'up';
+    else if(socket.player._pos && pos[0] > socket.player._pos[0] ) socket.player._facing = 'down';
+    else if(socket.player._pos && pos[1] > socket.player._pos[1] ) socket.player._facing = 'right';
     else socket.player._facing = 'left';
     socket.player._pos = pos;
+    if(!worlds[socket.player._world]) {
+      console.log("Player world "+socket.player._world+" is not in active worlds list!");
+      return;
+    }
     worlds[socket.player._world].occupiedTiles[pos[0]+','+pos[1]] = ['pc',socket.player._model._id];
     if(socket.player._world) {
         //console.log("Emitting move for "+socket.player._username+" to "+socket.player._world);
-        //io.to( socket.player._world ).emit('pc',{name: socket.player._username, pos: pos} );
+        io.to( socket.player._world ).emit('pc',{name: socket.player._username, pos: pos} );
     }
   });
 
@@ -305,8 +318,13 @@ function Warp(socket, params){
     var prev_world = socket.player._world;
     var portal_used = null;
     var portal_dest = null; //destination portal to warp on
+    var dest_pos = null;
     if(typeof(params)=="string"){
       id_world = params;
+      if(id_world=="home") { //get players homeworld
+        id_world = socket.player._homeworld;
+        if(socket.player._home_pos) dest_pos = socket.player._home_pos;
+      }
     } else if(params.id_world) {
         id_world = params.id_world;
         if(params.portal_to) { portal_dest = params.portal_to; }

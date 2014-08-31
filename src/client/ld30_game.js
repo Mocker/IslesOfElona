@@ -41,6 +41,16 @@ CreateGame = function(canvas_id, opts) {
 			showAlert('Requesting warp');
 			return false;
 		});
+
+		$('#btn_home').on('click',function(){
+			if(!self.playable) return;
+			//warp home
+			self._socket.emit('warp','home');
+			showSpinnner("Request warp home");
+			self.playable = false;
+			return false;
+		});
+
 		this._socket.on('connect', function(){
 			$('#info_server').html('Connected');
 			hideSpinner();
@@ -84,7 +94,8 @@ CreateGame = function(canvas_id, opts) {
 			console.log('pc',data);
 			if( !self._player_list[data.name]  ) return;
 			if(data.pos){
-				self.movePlayerTo(pos[0],pos[1], self._player_list[data.name] );
+				console.log("calling movePlayerTo");
+				self.movePlayerTo(data.pos[0], data.pos[1], data.name  );
 			}
 		});
 		this._socket.on('pc list', function(plist){ //list of pcs in the same world
@@ -94,7 +105,7 @@ CreateGame = function(canvas_id, opts) {
 
 		});
 		this._socket.on('pc join', function(pl){ //player joined world
-			if(pl.name==self._player._username) return;
+			if(pl.name==self._player._username||1 ) return;
 			console.log('pc join', pl);
 				var p = new Player(pl.name,'');
 				p._pos = pl.pos;
@@ -113,8 +124,8 @@ CreateGame = function(canvas_id, opts) {
 				p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle, self.spriteGroup);
 				p.sprite.bringToTop();
 				p.label.bringToTop();
-				self._player_list[pl.name] = p;
-				console.log(self._world._player_list);
+				//self._player_list[pl.name] = p;
+				console.log(self._player_list);
 		});
 		this._socket.on('pc leave', function(data){
 			if(self._player._username==data.name) return;
@@ -516,13 +527,14 @@ CreateGame = function(canvas_id, opts) {
 	};
 
 	this.movePlayerTo = function(tileX, tileY, pc, forceIt) {
+		console.log("movePlayerTo",tileX, tileY, pc, forceIt);
 		var centerTile = self.map.getTile( tileX, tileY, 'world' );
 		var blockTile = self.map.getTile( tileX, tileY, 'blocks');
 		if( !forceIt && blockTile && !blockTile.properties.passable ) return false;
-		console.log(centerTile);
+		console.log("centerTile",centerTile);
 		if( !forceIt && centerTile.properties.passable ===false ) return false;
 
-		if(!forceIt && (!self.curTile || ( self._world.occupiedTiles[tileX+','+tileY] && self._world.occupiedTiles[tileX+','+tileY][0]!='pc') ) ){
+		if(!pc && !forceIt && (!self.curTile || ( self._world.occupiedTiles[tileX+','+tileY] && self._world.occupiedTiles[tileX+','+tileY][0]!='pc') ) ){
 			var oc = self._world.occupiedTiles[tileX+','+tileY];
 			console.log("Tile occupied", oc);
 			if(oc[0]=='npc'){ //silly blood effects
@@ -550,9 +562,16 @@ CreateGame = function(canvas_id, opts) {
 			return false;
 		} 
 
-		$('#info_position').html( tileX+' , '+tileY);
+		
 		//TODO:: send move request to server
 		if(pc) { //move another player instead of you
+			if(self._player_list[pc] ) {
+				pc = self._player_list[pc];
+			} else {
+				var plist = [ {name:pc, pos:[tileX,tileY] } ];
+				self.loadPlayers(plist);
+				return;
+			}
 			pc._pos = [tileX, tileY];
 			pc.curTile = centerTile;
 			if(pc.sprite) {
@@ -565,7 +584,8 @@ CreateGame = function(canvas_id, opts) {
 				pc.label.y = centerTile.worldY-20;
 			}
 			return true;
-		} 
+		}
+		$('#info_position').html( tileX+' , '+tileY);
 		self._player._pos = [tileX, tileY];
 		self.curTile = centerTile;
 		self.sprite.x = centerTile.worldX + (self.sprite.width/2);
@@ -610,7 +630,7 @@ CreateGame = function(canvas_id, opts) {
 			console.log(plist[i].name);
 			if(plist[i].name==self._player._username) continue;
 			var pStyle = {font:"12px Arial", fill:"#ff0044",align:"center"};
-			var p = new Player(plist[i].name,'');
+			var p = new Player( plist[i].name,'');
 			self._player_list[ plist[i].name ] = p;
 			p._pos = plist[i].pos;
 			p.sprite = self._p.add.sprite(10,10,'chr1');
@@ -625,13 +645,12 @@ CreateGame = function(canvas_id, opts) {
 			p.curTile = self.map.getTile(p._pos[0], p._pos[1], 'world');
 			p.sprite.x = p.curTile.worldX + (p.sprite.width/2);
 			p.sprite.y = p.curTile.worldY + (p.sprite.height/4);
-			p.label = self._p.add.text(p.sprite.x,p.curTile.worldY-30,p._username, pStyle, self.spriteGroup);
-			p.sprite.bringToTop();
-			p.label.bringToTop();
-			self._player_list[plist[i].name] = p;
+			p.label = self._p.add.text(p.sprite.x, p.sprite.y-50,p._username, pStyle);
+			//p.sprite.bringToTop();
+			//p.label.bringToTop(); 
 			console.log("added player",p);
 		}
-		console.log("loaded players",self._player_list.length);
+		console.log("loaded players",self._player_list);
 	};
 
 	this.getTiles = function(x,y) {
