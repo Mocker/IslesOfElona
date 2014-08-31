@@ -212,7 +212,7 @@ World.prototype.generate = function(world_name, player, opts, cb){
 		}
 		if(!foundTile) continue;
 		var portal = new Item('portal', foundTile[0],foundTile[1] );
-		if(opts.link_portal && !opts.link_portal.linked) {
+		if(opts && opts.link_portal && !opts.link_portal.linked) {
 			portal._name = 'Portal to '+opts.link_portal.world_name;
 			portal._properties.is_explored = true;
 			portal._properties.id_world = opts.link_portal.id_world;

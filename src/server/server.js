@@ -207,6 +207,16 @@ io.on('connection', function(socket){
                         socket.emit('alert','Unable to load world');
                         return;
                       }
+                      if(!wResult) {
+                        console.log("No matching world found! "+socket.player._model.id_world);
+                        createWorld(socket.player,true,null,function(w){
+                          var wString = JSON.stringify(w);
+                          socket.join(w._model._id);
+                          socket.emit('world', wString, socket.player._pos);
+                          console.log("new world sent back to player");
+                        });
+                        return;
+                      }
                       var oldWorld = new World(cnf.WORLD_SIZE_PLAYER, cnf.WORLD_SIZE_PLAYER);
                       MODELS.loadWorld(socket.player, wResult, oldWorld, function(err, w){
                         console.log("Finished loading world! send to player");
@@ -474,8 +484,70 @@ function getWorldPlayers ( w ) {
   return plist;
 }
 
+/**
+  Generate a new world, optionally place player in it and/or flag as their homeworld
 
-//TODO:: world updates
+  @param player the player object calling the function
+  @param set_homeworld true/false whether to flag this as homeworld of calling player
+  @param opts hash of options to pass to World.generate
+  @param cb optional callback once world is generated and saved
+  TODO:: allow creating worlds without setting/moving player
+**/
+function  createWorld(player, set_homeworld, opts, cb ) {
+  var rand = Math.floor( Math.random()*(cnf.WORLD_SIZE_MAX-cnf.WORLD_SIZE_MIN)+cnf.WORLD_SIZE_MIN);
+  var newWorld = new World(rand, rand);
+  newWorld._model = new MODELS.World();
+  newWorld._model.is_primary = (set_homeworld)?true:false;
+  newWorld._is_primary = (set_homeworld)?true:false;
+  var name = (set_homeworld)?(player._username+"'s World") : makeid(8);
+  seed(name, {global: true } );
+  newWorld._biome = -1; //pick at random
+  var params =null;
+  newWorld.generate( name , player, opts, function(){
+    MODELS.saveWorld(newWorld,function(err,w){
+      if(err) {
+        console.log("Error generating world: "+err.message);
+      } else { 
+        w = newWorld;
+        if(player._world && worlds[player._world] ){
+          worlds[player._world]._current_players -= 1;
+          delete( worlds[player._world]._player_list[player._username] );
+          io.to(player._world).emit('pc leave',{name:player._username});
+        }
+        if(params && params.portal_i) { //TODO:: update this to use opts for optional portal linking
+          //update portal on old world to have this id
+          worlds[player._world]._portals[params.portal_i]._properties.is_explored = true;
+          worlds[player._world]._portals[params.portal_i]._name = "Portal to "+w._name;
+          worlds[player._world]._portals[params.portal_i]._properties.id_world = w._model._id;
+          worlds[player._world]._portals[params.portal_i]._properties.remote_id = w.linked_portal;
+          MODELS.saveWorld( worlds[player._world], function(err,r){ console.log("Previous world portal updated"); });
+        }
+
+        console.log("saveWorld returned");
+        w._player_list[player._username] = player._pos;
+        worlds[w._model._id] = w;
+        player._world = w._model._id;
+        player._zone = w._name;
+        player._model.id_world = w._model._id;
+        player._model.save(function(err,w){
+          if(err){
+            console.log("Couldn't update player model to new world! "+err.message);
+          } else { console.log("Player saved"); }
+        });
+
+        if(w.linked_portal) {
+          player._pos = [w._portals[w.linked_portal]._x, w._portals[w.linked_portal]._y ];
+          console.log("setting player position to linked portal : "+player._pos[0]+","+player._pos[1]);
+        }
+        //socket.emit('world', wString, player._pos); //-world is sent back to player in callback if required
+        if(cb) cb(w);
+        console.log("world finished");
+      }
+    });
+});
+}
+
+//TODO:: world updates - the world object should handle its own updates and then return a list of notices to send to the player
 //process updates for world and broadcast changes to connected players
 //every __ minutes, save world to db and file for recovery
 function update_world ( w ) {
@@ -564,8 +636,6 @@ function update_world ( w ) {
           io.to(w._model._id).emit('npc', [i,'move', w._npcs[i]._x,w._npcs[i]._y] );
           has_moved = true; npcsMoved.push(i);
         }
-
-
       }
     }
   }
