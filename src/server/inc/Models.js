@@ -88,7 +88,7 @@ Models.prototype.savePlayer = function( player, cb ) {
 	player._model.pwdE = player._password;
 	player._model.id_world = player._world;
 	player._model.homeworld = player._homeworld;
-	//player._model.home_pos = player._home_pos;
+	player._model.home_pos = player._home_pos;
 	player._model.x = player._pos[0];
 	player._model.y = player._pos[1];
 	player._model.kills = player._kills;
@@ -138,7 +138,7 @@ Models.prototype.savePlayer = function( player, cb ) {
 	}
 	p.speed = 1; //TODO:: have speed set in Player
 	p.modifiers = []; //TODO: load modifiers
-	p.id_world = (typeof(player._world)=="string") ? player._world : player._world._model._id;
+	p.id_world = (typeof(player._world)=="string") ? player._world : player._model.id_world;
 	p.x = player._pos[0];
 	p.y = player._pos[1];
 
@@ -166,6 +166,7 @@ Models.prototype.loadPlayer = function( player, pModel, cb ) {
 	player._zone = pModel.id_world;
 	player._created = pModel.dt_create;
 	player._homeworld = pModel.homeworld;
+	player._home_pos = pModel.home_pos;
 	player._world = pModel.id_world;
 	player._model = pModel;
 	player._attack = pModel.attack;
