@@ -147,6 +147,7 @@ CreateGame = function(canvas_id, opts) {
 				if(!self._player && !self._world) {
 					self._player = new Player(self._login_params.user, self._login_params.pwd);
 					self._player.setProfile(resp.profile);
+					console.log("player profile set",resp.profile);
 					self._player.updateDisplay();
 					$('div.right').slideDown();
 					self._player.updateDisplay();

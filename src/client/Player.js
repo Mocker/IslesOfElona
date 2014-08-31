@@ -75,6 +75,7 @@ Player.prototype.setProfile = function (p) {
 	this._pos = p.pos;
 	this._created = p.created;
 	this._world = p.world;
+	this._kills = p.kills;
 };
 
 //update client player display
