@@ -280,7 +280,7 @@ cnf.NPC_ATLAS = {
 			hostile : true,
 			base_health : 50,
 			speed : 2,
-			chase_distance : 15
+			chase_distance : 10
 		},
 		blobbit : {
 			frame : {x:144, y:240, w:48, h:48},
@@ -299,7 +299,7 @@ cnf.NPC_ATLAS = {
 			flying : true,
 			speed : 4,
 			base_health : 15,
-			chase_distance : 25
+			chase_distance : 15
 		}
 
 	}

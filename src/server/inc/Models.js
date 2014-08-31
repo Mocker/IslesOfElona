@@ -56,12 +56,20 @@ function Models() {
 	});
 	this.Player = mongoose.model('Player',this.playerSchema);
 
+	this.npcSchema = new mongoose.Schema({
+		json 		: String,
+		type 		: String,
+		x 			: Number,
+		y 			: Number,
+		name 		: String
+	});
+
 	
 	this.worldSchema = mongoose.Schema({
 		is_primary   : Boolean, //if is the primary home world for given player
 		id_player 	: String, //optional if player owned world
 		dt_create 	: {type: Date, default: Date.now },
-		npcs 		: [ { json: String, type: String, x: Number, y: Number, name: String } ],
+		npcs 		: [ this.npcSchema ],
 		portals     : [ { json: String, name: String, is_explored:Boolean, x: Number, y: Number, id_world: String, remote_id: Number}],
 		last_activity : {type: Date, default: Date.now },
 		current_players: Number,
@@ -193,13 +201,13 @@ Models.prototype.loadPlayer = function( player, pModel, cb ) {
 
 
 Models.prototype.saveWorld = function( world, cb ) {
-	world._model.npcs = [];
+	var npcs = [];
 	for (var i=0;i<world._npcs.length;i++ ) {
 		if(!world._npcs[i]){
 			world._model.npcs.push({json:null,type:null,x:null,y:null,name:null} );
 			continue;
 		}
-		world._model.npcs.push({ 
+		npcs.push({ 
 			json 	: JSON.stringify(world._npcs[i]),
 			type 	: world._npcs[i]._type,
 			x		: world._npcs[i]._x,
@@ -207,6 +215,7 @@ Models.prototype.saveWorld = function( world, cb ) {
 			name 	: world._npcs[i]._name
 		 });
 	}
+	world._model.npcs = npcs;
 	//portals     : [ { json: String, name: String, x: Number, y: Number, id_world: String, remote_portal: Number}],
 	var portals = [];
 	for( i=0;i<world._portals.length;i++) {
@@ -261,6 +270,8 @@ Models.prototype.loadWorld = function( player, wModel, world, cb) {
 	world._width = wModel.width;
 	world._is_primary = wModel.is_primary;
 	world._npcs = []; 
+	world.occupiedTiles = {};
+	world._players = {};
 	for(var i =0;i<wModel.npcs.length;i++) {
 		if(!wModel.npcs[i].json) {
 			world._npcs.push(null);
@@ -268,11 +279,13 @@ Models.prototype.loadWorld = function( player, wModel, world, cb) {
 		}
 		var npc = JSON.parse(wModel.npcs[i].json);
 		world._npcs.push(npc);
+		world.occupiedTiles[npc._x+','+npc._y] = ['npc', world._npcs.length-1];
 	}
 	world._portals = []; 
 	for(i =0;i<wModel.portals.length;i++) {
 		var portal = JSON.parse(wModel.portals[i].json);
 		world._portals.push(portal);
+		world.occupiedTiles[portal._x+','+portal._y] = ['portal', world._portals.length-1];
 	}
 	world._current_players = 1;
 	world._player_list = {};

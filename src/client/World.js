@@ -33,6 +33,10 @@ function World( width, height ) {
 	this.linked_portal = false;
 	if(typeof(module) ==="undefined") this._map = new Map(); //only trigger on frontend
 
+	this.distTiles = function(x1,y1,x2,y2) {
+		return Math.floor(Math.sqrt( Math.abs(x1-x2)*Math.abs(x1-x2) + Math.abs(y1-y2)*Math.abs(y1-y2) ) );
+	};
+
 }
 
 
@@ -232,6 +236,7 @@ World.prototype.generate = function(world_name, player, opts, cb){
 
 	if(cb) cb();
 };
+
 
 
 if(typeof(module)!=="undefined") module.exports = World;

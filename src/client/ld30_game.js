@@ -51,7 +51,7 @@ CreateGame = function(canvas_id, opts) {
 					//TODO:: relogin automatically
 					console.log("attempting to login automatically");
 					self._login_params.id_world = self._world._model._id;
-					self._socket.emit('login',self._login_params);
+					//self._socket.emit('login',self._login_params);
 					showSpinner("Reconnecting..");
 				} 
 				console.log('socket connect');
@@ -59,6 +59,7 @@ CreateGame = function(canvas_id, opts) {
 			//$('#login_modal').css('display','block');
 		});
 		this._socket.on('connect_error',function(){
+			console.log("Connect Error!");
 			$('#info_server').html('Connect Failed');
 			showSpinner("Server Disconnected");
 			self.playable = false; 
@@ -66,6 +67,7 @@ CreateGame = function(canvas_id, opts) {
 			//self._socket.disconnect();
 		});
 		this._socket.on('disconnect',function(){
+			console.log("Server Disconnected!");
 			$('#info_server').html('Disconnected');
 			showSpinner("Server Disconnected");
 
@@ -177,11 +179,11 @@ CreateGame = function(canvas_id, opts) {
 
 		//npc action
 		this._socket.on('npc', function(data){
-			
+			//console.log("npc move!",data);
 			if( !self._world._npcs[ data[0] ] ) return;
 
 			if(data.length>1 && data[1]=='move') {
-				//console.log("npc move!",data);
+				
 				var curTile = self.map.getTile(data[2],data[3],'world');
 				//self._world._npcs[data[0]].tween = self._p.add.tween(self._world._npcs[data[0]] ).to({x: curTile.worldX+24, y: curTile.worldX+24}, 1000, Phaser.Easing.Quadratic);
 				var oc = self._world.occupiedTiles[ self._world._npcs[data[0]]._x+','+self._world._npcs[data[0]]._y];
@@ -404,6 +406,7 @@ CreateGame = function(canvas_id, opts) {
 			em.maxParticleSpeed = 12.5;
 			em.start(true,1000,3);
 			var npc = self._world._npcs[oc[1]];
+			npc._meta.hostile = true;
 			if(npc && !npc.lbl) {
 				npc.lbl = self._p.add.text(npc.sprite.x-10,npc.sprite.y-35,"Ouch!",{font:'16px Arial',fill:'#330000'},self.spriteGroup);
 				setTimeout(function(){
@@ -486,7 +489,7 @@ CreateGame = function(canvas_id, opts) {
 		}
 
 		var centerX = Math.floor(self._world._width/2); //TODO:: player pos sent from server
-		if(newPos) self.movePlayerTo( newPos[0], newPos[1] );
+		if(newPos) self.movePlayerTo( newPos[0], newPos[1], null, true );
 		else self.movePlayerTo( centerX, Math.floor(self._world._height/2) );
 		self.playable = true;
 		self._p.camera.follow(self.sprite);
@@ -512,18 +515,23 @@ CreateGame = function(canvas_id, opts) {
 		},100);
 	};
 
-	this.movePlayerTo = function(tileX, tileY, pc) {
+	this.movePlayerTo = function(tileX, tileY, pc, forceIt) {
 		var centerTile = self.map.getTile( tileX, tileY, 'world' );
 		var blockTile = self.map.getTile( tileX, tileY, 'blocks');
-		if(blockTile && !blockTile.properties.passable ) return false;
+		if( !forceIt && blockTile && !blockTile.properties.passable ) return false;
 		console.log(centerTile);
-		if( centerTile.properties.passable ===false ) return false;
+		if( !forceIt && centerTile.properties.passable ===false ) return false;
 
-		if( !self.curTile || ( self._world.occupiedTiles[tileX+','+tileY] && self._world.occupiedTiles[tileX+','+tileY][0]!='pc') ){
+		if(!forceIt && (!self.curTile || ( self._world.occupiedTiles[tileX+','+tileY] && self._world.occupiedTiles[tileX+','+tileY][0]!='pc') ) ){
 			var oc = self._world.occupiedTiles[tileX+','+tileY];
 			console.log("Tile occupied", oc);
 			if(oc[0]=='npc'){ //silly blood effects
-				
+				if(self._world._npcs[oc[1]] && !self._world._npcs[oc[1]]._meta.hostile) {
+					var oof = self._p.add.text( centerTile.worldX, centerTile.worldY-20, 'Oof!', {font:'16px Arial', fill:'#000000'});
+					setTimeout(function(){
+						oof.destroy();
+					},1000);
+				}
 			} else if(oc[0]=='portal') {
 				var portal = self._world._portals[oc[1]];
 				var m = {
@@ -540,7 +548,7 @@ CreateGame = function(canvas_id, opts) {
 				self.ui.showMenu(m);
 			}
 			return false;
-		}
+		} 
 
 		$('#info_position').html( tileX+' , '+tileY);
 		//TODO:: send move request to server
@@ -661,3 +669,4 @@ function showAlert(msg) {
 	$('#alert_modal div.msg').html(msg);
 	$('#alert_modal').modal('show');
 }
+

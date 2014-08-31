@@ -18,6 +18,7 @@ cnf.MAX_PLAYERS = 15;
 cnf.MAX_CONNECTIONS = 30;
 cnf.PORT = 8001;
 
+
 var db_connected = false;
 mongoose.connect(CONFIG.MONGO_URL);
 var db = mongoose.connection;
@@ -30,8 +31,8 @@ var players = {};
 var world_ticker = setInterval(function(){
   for(var id_world in worlds ) {
     if( worlds[id_world]._current_players < 1) {
-      console.log("World "+id_world+" is empty.. purging.. ");
-      delete( worlds[id_world]);
+      //console.log("World "+id_world+" is empty.. purging.. ");
+      //delete( worlds[id_world]);
       continue;
     }
     update_world( worlds[id_world]);
@@ -67,6 +68,10 @@ io.on('connection', function(socket){
 
   socket.player = false;
 
+  socket.on('disconnect', function(){
+    console.log("Player "+((socket.player)?socket.player._username:'*unknown*')+' disconnected'); 
+  });
+
   socket.on('chat message', function(msg){
     io.emit('chat message', {
       user: (socket.player)?socket.player._username:'Disconnected',
@@ -80,6 +85,7 @@ io.on('connection', function(socket){
   socket.on('move', function(pos){
     //TODO:: verify moves are ok
     if(pos[0]==socket.player._pos[0] && pos[1]==socket.player._pos[1]) return;
+
     //set facing
     if(pos[0] < socket.player._pos[0]) socket.player._facing = 'up';
     else if(pos[0] > socket.player._pos[0] ) socket.player._facing = 'down';
@@ -96,6 +102,7 @@ io.on('connection', function(socket){
   socket.on('attack', function(npcI){
     if(socket.player._world && worlds[socket.player._world] && worlds[socket.player._world]._npcs[npcI] ){
       worlds[socket.player._world]._npcs[npcI]._health -= socket.player._attack;
+      worlds[socket.player._world]._npcs[npcI]._meta.hostile = true;
       console.log("Player "+socket.player._username+" attacked npc "+npcI);
       if( worlds[socket.player._world]._npcs[npcI]._health <= 0 ) {
         //kill npc
@@ -204,8 +211,10 @@ io.on('connection', function(socket){
                       MODELS.loadWorld(socket.player, wResult, oldWorld, function(err, w){
                         console.log("Finished loading world! send to player");
                         socket.player._world = w._model._id;
+                        w._player_list[socket.player._username] = socket.player._pos;
                         var wString = JSON.stringify(w);
                         socket.emit('world', wString, socket.player._pos);
+                        socket.join(w._model._id);
                         worlds[w._model._id] = w;
                       });
                     });
@@ -474,50 +483,93 @@ function update_world ( w ) {
 
   //npc actions 
   // TODO:: group all actions together and emit as one list?
+  var npcsMoved = [];
   for(i=0;i<w._npcs.length;i++){
     if(!w._npcs[i]) continue; //dead npcs get nulled out to keep indexes correct instead of deleting
     if(!w._npcs[i]._meta){
       console.log("npc "+i+" has no meta.."); continue;
     }
+    var break_npc = false;
     if( w._npcs[i]._meta.hostile ) {
       //check players in this world to decide who to chase
       var chase_distance = (w._npcs[i]._meta.chase_distance)?w._npcs[i]._meta.chase_distance:10;
+      var attack_distance = (w._npcs[i]._meta.attack_distance)?w._npcs[i]._meta.attack_distance:1;
       var chase_sq = chase_distance * chase_distance;
-      var chase_player = false;
+      var chase_player =  false;
       for(var p in w._player_list ) {
-        if( chase_sq < w._player_list[0]*w._npcs[i]._x + w._player_list[1]*w._npcs[i]._y  ) {
+        var dist = w.distTiles( players[p]._pos[0], players[p]._pos[1], w._npcs[i]._x, w._npcs[i]._y);
+        if( (w._npcs[i].chase_player && w._npcs[i].chase_player[2] >= dist) || chase_distance < dist  ) {
           continue;
         } else {
-          chase_player = [p, w._player_list[p] ];
+          chase_player = [p, players[p]._pos, dist ];
+          w._npcs[i].chase_player = chase_player;
+          if(dist <= attack_distance ) {
+            console.log("NPC "+w._npcs[i]._name+" will attack player "+p);
+            break_npc = true; break;
+          }
+          break;
+          //console.log("npc "+w._npcs[i]._name+" is chasing player "+p);
         }
       }
-      if(chase_player&&0) {
+      if(break_npc) continue;
+
+      var dirY=0; var dirX=0; var tiles=false;
+      if(chase_player) {
         //try to move towards player
+        var t = null; 
+        if( chase_player[1][0] < w._npcs[i]._x ) { //left
+          if(chase_player[1][1] < w._npcs[i]._y ) { dirX = -1; dirY = -1; }
+          else if(chase_player[1][1] == w._npcs[i]._y ) { dirX = -1; dirY = 0; }
+          else { dirX = -1; dirY = 1; }
+        } else if( chase_player[1][0] == w._npcs[i]._x ) {
+          if(chase_player[1][1] < w._npcs[i]._y ) { dirX = 0; dirY = -1; }
+          else { dirX = 0; dirY = +1; }
+        } else { //right
+          if(chase_player[1][1] < w._npcs[i]._y ) { dirX = 1; dirY = -1; }
+          else if(chase_player[1][1] == w._npcs[i]._y ) { dirX = 1; dirY = 0; }
+          else { dirX = 1; dirY = 1; }
+        }
+        
+        tiles = getTiles(w, w._npcs[i]._x+dirX, w._npcs[i]._y+dirY );
+        if(!tiles){ console.log("invalid move for npc "+w._npcs[i]._name); continue; }
+        if(!cnf.tiles[ tiles[0] ].passable && !w._npcs[i]._meta.flying ){ console.log("tile "+tiles[0]+" is not passable"); continue; }
+        if(w.occupiedTiles) delete( w.occupiedTiles[w._npcs[i]._x+','+w._npcs[i]._y] );
+        w._npcs[i]._x += dirX;
+        w._npcs[i]._y += dirY;
+        w.occupiedTiles[w._npcs[i]._x+','+w._npcs[i]._y] = ['npc', i];
+        io.to(w._model._id).emit('npc', [i,'move', w._npcs[i]._x,w._npcs[i]._y] );
+        console.log(w._model._id+"["+dirX+","+dirY+"] NPC "+w._npcs[i]._name+"["+w._npcs[i]._x+","+w._npcs[i]._y+"] is chasing player ("+chase_player[2]+") ["+chase_player[1][0]+","+chase_player[1][1]+"]");
+          
+        has_moved = true; npcsMoved.push(i);
+
       } else {
         //random or stand still
         var has_moved = false;
         var attempts = 0;
+        
         while(!has_moved && attempts < 4){
-          var dirX = Math.floor(Math.random()*3)-1;
-          var dirY = Math.floor(Math.random()*3)-1;
+          dirX = Math.floor(Math.random()*3)-1;
+          dirY = Math.floor(Math.random()*3)-1;
           if(dirY===0 && dirX===0){
             has_moved=true;
             break;
           }
-          var tiles = getTiles(w, w._npcs[i]._x+dirX, w._npcs[i]._y+dirY);
+          tiles = getTiles(w, w._npcs[i]._x+dirX, w._npcs[i]._y+dirY);
           if(tiles===false){ attempts++; continue;}
           if(!cnf.tiles[ tiles[0] ].passable && !w._npcs[i]._meta.flying ){ attempts++; continue; }
-          delete(w.occupiedTiles[w._npcs[i]._x+','+w._npcs[i]._y]);
+          if(w.occupiedTiles) delete( w.occupiedTiles[w._npcs[i]._x+','+w._npcs[i]._y] );
           w._npcs[i]._x += dirX;
           w._npcs[i]._y += dirY;
           w.occupiedTiles[w._npcs[i]._x+','+w._npcs[i]._y] = ['npc', i];
           io.to(w._model._id).emit('npc', [i,'move', w._npcs[i]._x,w._npcs[i]._y] );
-          has_moved = true;
+          has_moved = true; npcsMoved.push(i);
         }
+
 
       }
     }
   }
+  //if(npcsMoved.length>0) console.log("World "+w._name+" moved "+npcsMoved.length+" npcs");
 }
 
 function getTiles(w, x, y) { //return map tile, occupiedTile for x,y of world 
@@ -525,7 +577,7 @@ function getTiles(w, x, y) { //return map tile, occupiedTile for x,y of world
   if(y<0 || y >= w._height ) return false;
   var tiles = [];
   tiles[0] = w._mapData[x][y];
-  if( w.occupiedTiles[x+','+y]) tiles[1] = w.occupiedTiles[x+','+y];
+  if( w.occupiedTiles && w.occupiedTiles[x+','+y]) tiles[1] = w.occupiedTiles[x+','+y];
   return tiles;
 }
 

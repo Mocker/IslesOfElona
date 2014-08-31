@@ -8,3 +8,9 @@ Phantom/Node JS game with theme "Connected Worlds"
 
 
 topdown fantasy rpg, get a small random world to explore/conquer and portals to other small worlds or able to visit other players
+
+
+
+ISSUES:
+------------
+On warp through portal place user ON portal
