@@ -46,7 +46,7 @@ CreateGame = function(canvas_id, opts) {
 			if(!self.playable) return;
 			//warp home
 			self._socket.emit('warp','home');
-			showSpinnner("Request warp home");
+			self.showSpinnner("Requesting warp home");
 			self.playable = false;
 			return false;
 		});
