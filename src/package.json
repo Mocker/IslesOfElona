@@ -4,7 +4,7 @@
   "devDependencies": {
     "node-static":"^0.7.4",
     "mongodb": "^1.0.0",
-    "mongoose": "^3.0.0",
+    "mongoose": "^5.7.8",
     "socket.io": "^1.0.0",
     "seed-random":"^2.1.0",
     "grunt": "^0.4.5",
